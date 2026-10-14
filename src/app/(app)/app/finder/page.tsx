@@ -117,7 +117,7 @@ export default function Finder() {
         {filtered.length === 0 ? (
           <Empty title="No organizations match these filters">Widen the radius or clear the filters.</Empty>
         ) : (
-          <div className={cn(view === "map" && "grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]")}>
+          <div className={cn(view === "map" && "grid gap-4 xl:grid-cols-[minmax(0,0.75fr)_minmax(0,1.25fr)]")}>
           {view === "map" ? (
             <div className="overflow-hidden rounded-2xl border border-line bg-surface xl:sticky xl:top-[120px] xl:self-start">
               <OsmMap center={officePoint} zoom={radius === "25" ? 10 : radius === "10" ? 11 : 12} markers={markers}
@@ -133,9 +133,9 @@ export default function Finder() {
               <THead>
                 <tr>
                   <TH className="w-10 text-right">#</TH>
-                  <TH>Organization</TH>
+                  <TH className="min-w-[12rem]">Organization</TH>
                   <TH>Fit</TH>
-                  <TH className="min-w-[18rem]">Why</TH>
+                  <TH className="min-w-[15rem]">Why</TH>
                   <TH>Stage</TH>
                   <TH className="text-right">Drive</TH>
                   <TH className={cn(view === "map" && "hidden")}>Sources</TH>
