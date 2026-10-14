@@ -16,7 +16,7 @@ export function ClockCell({ referral, now, size = "sm" }: { referral: Referral; 
 
   if (c.state === "stopped") {
     return (
-      <span className="inline-flex items-center gap-1.5 text-ok">
+      <span className="inline-flex items-center gap-1.5 text-teal-strong">
         <CheckCircle2 size={big ? 18 : 14} />
         <span className={cn(big && "text-base font-medium")}>{c.firstContactMs !== undefined ? `${referral.firstContactAt ? "First contact" : "Actioned"} in ${hoursText(c.firstContactMs)}` : "Actioned"}</span>
       </span>
@@ -30,16 +30,17 @@ export function ClockCell({ referral, now, size = "sm" }: { referral: Referral; 
       </span>
     );
   }
-  const tone = c.state === "overdue" ? "text-crit" : c.state === "due_soon" ? "text-warn" : "text-ink";
+  // Brand: teal badge with white numerals; amber only when about to breach (or past it). Words + icon, never colour alone.
+  const pill = c.state === "overdue" ? "bg-cv-amber text-cv-ink ring-2 ring-cv-ink/70" : c.state === "due_soon" ? "bg-cv-amber text-cv-ink" : "bg-teal text-white";
   const Icon = c.state === "overdue" ? TriangleAlert : c.state === "due_soon" ? AlarmClock : Clock3;
   const word = c.state === "overdue" ? "Overdue" : c.state === "due_soon" ? "Due soon" : "On track";
   return (
-    <span className={cn("inline-flex flex-col", tone)}>
-      <span className="inline-flex items-center gap-1.5">
-        <Icon size={big ? 18 : 14} aria-hidden />
-        <span className={cn("font-mono tabular", big ? "text-2xl font-medium" : "text-[0.9rem] font-medium")}>{hms(c.leftMs)}</span>
+    <span className="inline-flex flex-col items-start gap-1" data-clock={c.state}>
+      <span className={cn("inline-flex items-center gap-1.5 rounded-full", pill, big ? "px-4 py-1.5" : "px-2.5 py-0.5")}>
+        <Icon size={big ? 18 : 13} aria-hidden />
+        <span className={cn("font-mono tabular font-bold", big ? "text-2xl" : "text-[0.85rem]")}>{hms(c.leftMs)}</span>
       </span>
-      <span className={cn("text-xs", c.state === "on_track" ? "text-ink-3" : "")}>
+      <span className={cn("text-xs", c.state === "on_track" ? "text-ink-3" : "font-semibold text-ink-2")}>
         {word}, {c.state === "overdue" ? `was ${due}` : due}
       </span>
     </span>

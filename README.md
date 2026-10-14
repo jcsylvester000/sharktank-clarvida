@@ -75,6 +75,7 @@ npm run build
 cd qa && npm install  # first time
 node server.js ../out 4310 &   # serve the build
 node b1-accounts.js            # Batch 1: accounts, sign-in, MFA, welcome, dashboards, lockout, reset, access
+node b2-care.js                # Batch 2: partner form → intake → referral → status, consent, X-ray, redirect, escalation
 ```
 
 ## Build status
@@ -82,7 +83,7 @@ node b1-accounts.js            # Batch 1: accounts, sign-in, MFA, welcome, dashb
 | Batch | Scope | Status |
 |---|---|---|
 | B1 | Foundation: brand system, 11 accounts, sign-in, SSO chooser, MFA + Demo Authenticator, remembered devices, lockout, password reset, welcome, role dashboards, mock API, notifications, Demo Inbox, settings, partner hub, reset | Done (Oct 14) |
-| B2 | Care loop: partner form, confirmation, status, intake queue, referral detail, clock, consent simulator, X-ray, referrer notices | Next |
-| B3 | Outreach and maps: Map Explorer (OpenStreetMap), finder, directory, organization, nurture, kits, capacity, events | |
+| B2 | Care loop: branded partner form (specific errors, nearest office, sample fill), reference-only confirmation, signed status links, live handoff, intake queue with next best call, brand response clock, referral detail, warm redirect, escalation + reassign, referrer notices and team activity | Done (Oct 14) |
+| B3 | Outreach and maps | Next |
 | B4 | Insights, governance, opening scene, guided demo, presenter window | |
 | B5 | QA against the Acceptance Criteria workbook and freeze | |

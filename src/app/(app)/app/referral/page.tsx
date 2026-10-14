@@ -10,8 +10,12 @@ import { href, accessForUser, pageById } from "@/lib/access";
 import { TRANSITIONS, HOLD_REASONS, CLOSE_REASONS, suggestUnableToContact, tier1Status } from "@/lib/rules/status";
 import { disclosure } from "@/lib/rules/disclosure";
 import { queueLabel } from "@/lib/rules/routing";
-import { assignOwner, logAttempt, logReveal, recordConsent, resolveDuplicate, setStatus } from "@/lib/services/referrals";
+import { logReveal, recordConsent, resolveDuplicate } from "@/lib/services/referrals";
+import { referrals as api } from "@/mock-api";
+import { isPaused } from "@/lib/rules/outreach";
+import { CornerUpRight, Users } from "lucide-react";
 import { audit } from "@/lib/services/core";
+import { statusLink } from "@/lib/rules/status-link";
 import { REFERRAL_FIELDS, type FieldMeta } from "@/lib/xray";
 import { fmtDateTime, maskPhone, ago } from "@/lib/format";
 import type { ContactAttempt, Referral, ReferralStatus, SourceType } from "@/lib/domain/types";
@@ -50,6 +54,7 @@ function Detail() {
   const [statusDlg, setStatusDlg] = useState<ReferralStatus | null>(null);
   const [revealUntil, setRevealUntil] = useState(0);
   const [dupOpen, setDupOpen] = useState(false);
+  const [redirect, setRedirect] = useState<string | null>(null);
 
   useEffect(() => { setXray(params.get("xray") === "1"); setSimOpen(params.get("panel") === "consent"); }, [params]);
   useEffect(() => {
@@ -74,6 +79,7 @@ function Detail() {
   const owner = db.users.find((u) => u.id === r.ownerId);
   const intakeUsers = db.users.filter((u) => (u.role === "intake" || u.role === "intake_sup") && u.scope.some((s) => s === r.state || s === "ALL"));
   const allowed = TRANSITIONS[r.status].filter((s) => s !== "Contacted");
+  const openAlternatives = db.programs.filter((p) => p.state === r.state && p.id !== r.programId && !isPaused(p) && r.age >= p.ageMin && r.age <= p.ageMax).slice(0, 3);
   const realNow = Date.now(); // the reveal countdown is real seconds, even when sandbox time runs faster
   const revealed = revealUntil > realNow;
 
@@ -108,6 +114,18 @@ function Detail() {
 
       {xray ? <XrayPanel referral={r} programName={program?.name} orgName={org?.name} /> : null}
 
+      {!readOnly && program && isPaused(program) && r.status !== "Redirected" && r.status !== "Closed" && openAlternatives.length ? (
+        <Callout tone="neutral" className="mb-4 border-cv-amber bg-hl-tint" icon={<CornerUpRight size={16} className="text-warn" />} title={`${program.name} has a waitlist${program.expectedReopen ? ` (reopens ${program.expectedReopen})` : ""}`}
+          action={<div className="flex flex-wrap gap-2">{openAlternatives.map((p) => <Button key={p.id} size="sm" variant="secondary" onClick={() => setRedirect(p.id)} data-guide="warm-redirect">{p.name} ({p.capacity.toLowerCase()})</Button>)}</div>}>
+          Redirect the family to an open program in two clicks. The referrer is told honestly about the wait and the new program.
+        </Callout>
+      ) : null}
+      {r.escalatedAt && r.status === "New" && user.role === "intake_sup" ? (
+        <Callout tone="neutral" className="mb-4 border-cv-amber bg-hl-tint" icon={<Users size={16} className="text-warn" />} title={`Overdue: escalated to you ${ago(r.escalatedAt, now)}`}
+          action={<div className="flex flex-wrap gap-2">{intakeUsers.filter((u) => u.role === "intake" && u.id !== r.ownerId).map((u) => <Button key={u.id} size="sm" variant="cta" chevron={false} onClick={() => { void api.assignOwner(r.id, u.id).then(() => toast.success(`Reassigned to ${u.name}`, { description: "They were notified." })); }}>Reassign to {u.firstName ?? u.name} ({db.referrals.filter((x) => x.ownerId === u.id && (x.status === "New" || x.status === "Contacted" || x.status === "Accepted")).length} open)</Button>)}</div>}>
+          Past the 1-business-day target with no contact yet.
+        </Callout>
+      ) : null}
       {r.dupOf ? (
         <Callout tone="warn" className="mb-4" icon={<Copy size={16} className="text-warn" />} title={`Possible duplicate of ${r.dupOf}`} action={!readOnly ? <Button size="sm" variant="secondary" onClick={() => setDupOpen(true)}>Compare</Button> : null}>
           Same phone number and program within 30 days. Merging keeps both referrers.
@@ -150,7 +168,7 @@ function Detail() {
                   {r.status === "Intake scheduled" ? <p className="text-xs text-ink-3">Intake completed is recorded by hand in the pilot. In production it comes from the EHR status feed.</p> : null}
                   <div className="flex flex-wrap items-center gap-2">
                     <Label htmlFor="owner" className="text-ink-2">Owner</Label>
-                    <Select id="owner" value={r.ownerId ?? ""} onChange={(e) => mutate((dr) => assignOwner(dr, r.id, e.target.value))} className="h-9 w-auto min-w-48">
+                    <Select id="owner" value={r.ownerId ?? ""} onChange={(e) => { void api.assignOwner(r.id, e.target.value).then(() => toast.success("Owner updated", { description: "They were notified." })); }} className="h-9 w-auto min-w-48">
                       <option value="" disabled>Choose an owner</option>
                       {intakeUsers.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
                     </Select>
@@ -282,22 +300,41 @@ function Detail() {
                   ))}
                 </ul>
               </XField>
-              <Link href={`/partner/status/?ref=${r.id}`} target="_blank" className="mt-3 inline-block text-sm text-teal hover:underline">Open the referrer's status page</Link>
+              <Link href={statusLink(r.id)} target="_blank" className="link mt-3 inline-block text-sm font-medium">Open the referrer's status page</Link>
             </PanelBody>
           </Panel>
         </div>
       </div>
 
-      <AttemptDialog open={attemptOpen} onOpenChange={setAttemptOpen} onSave={(m, o) => { mutate((dr) => logAttempt(dr, r.id, m, o)); toast.success("Contact attempt logged", { description: r.firstContactAt ? undefined : "Clock stopped. The referrer was told: In outreach." }); }} />
+      <AttemptDialog open={attemptOpen} onOpenChange={setAttemptOpen} onSave={async (m, o) => { await api.logAttempt(r.id, m, o); toast.success("Contact attempt logged", { description: r.firstContactAt ? undefined : o === "Reached guardian" ? "Clock stopped. The referrer was told the family was contacted, with no client details." : "Clock stopped. The referrer was told we are reaching out." }); }} />
       <StatusDialog status={statusDlg} onClose={() => setStatusDlg(null)} onSave={(s, reason, to) => doStatus(s, reason, to)} programs={db.programs.filter((p) => p.state === r.state && p.id !== r.programId).map((p) => `${p.name}, ${p.office}`)} />
+      <Dialog
+        open={Boolean(redirect)}
+        onOpenChange={(o) => !o && setRedirect(null)}
+        title="Redirect to an open program?"
+        description="The family keeps the same reference number. The referrer gets a PHI-free update."
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setRedirect(null)}>Cancel</Button>
+            <Button variant="cta" onClick={() => { const p = db.programs.find((x) => x.id === redirect); setRedirect(null); if (p) void doStatus("Redirected", "Waitlist", `${p.partnerLabel} (${p.office})`); }}>Redirect</Button>
+          </>
+        }
+      >
+        {(() => { const p = db.programs.find((x) => x.id === redirect); return p ? (
+          <div className="rounded-xl bg-cv-ice px-4 py-3 text-sm">
+            <p className="font-semibold">To the referrer</p>
+            <p className="mt-1 text-ink-2">The program first chosen for referral {r.id} is full, so we connected the family with {p.partnerLabel} ({p.office}). Being honest about wait times helps families get help sooner.</p>
+          </div>
+        ) : null; })()}
+      </Dialog>
       <DuplicateDialog open={dupOpen} onOpenChange={setDupOpen} a={r} b={db.referrals.find((x) => x.id === r.dupOf)} onDecide={(dec) => { mutate((dr) => resolveDuplicate(dr, r.id, dec)); setDupOpen(false); }} />
     </div>
   );
 
-  function doStatus(s: ReferralStatus, reason?: string, redirectTo?: string) {
+  async function doStatus(s: ReferralStatus, reason?: string, redirectTo?: string) {
     try {
-      mutate((dr) => setStatus(dr, r!.id, s, { reason, redirectTo }), { entity: "referral", id: r!.id, action: "status" });
-      toast.success(`Referral ${s === "Hold" ? "put on hold" : s.toLowerCase()}`, { description: "The referrer was sent a PHI-free update." });
+      await api.setStatus(r!.id, s, { reason, redirectTo });
+      toast.success(`Referral ${s === "Hold" ? "put on hold" : s.toLowerCase()}`, { description: "The referrer was sent a PHI-free update (Demo Inbox)." });
     } catch (e) {
       toast.error((e as Error).message);
     }

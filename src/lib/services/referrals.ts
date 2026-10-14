@@ -6,6 +6,7 @@ import { findDuplicate, routeReferral } from "@/lib/rules/routing";
 import { canTransition, tier1Status } from "@/lib/rules/status";
 import { clockFor } from "@/lib/rules/clock";
 import { audit, currentUser, notify } from "./core";
+import { careActivity, mailReferrer, sourceName } from "./notices";
 import { now as clockNow } from "@/lib/clock";
 
 export interface NewReferralInput {
@@ -70,6 +71,10 @@ export function createReferral(d: Draft<DB>, input: NewReferralInput, opts: { ex
       : `Your referral ${id} was received. We will contact the family within 1 business day.`,
   });
   d.referrals.unshift(r);
+  const rd = d.referrals[0];
+  mailReferrer(d, rd, paused ? "On hold" : "Received", program?.expectedReopen || undefined);
+  const referrer = input.referrerEmail ? d.users.find((u) => u.email?.toLowerCase() === input.referrerEmail!.toLowerCase()) : undefined;
+  careActivity(d, referrer?.id ?? staff?.id ?? "partner", `New referral from ${sourceName(d, input)}${opts.external ? " (partner portal)" : ` (${input.channel.toLowerCase()})`}`, input.state);
 
   if (input.partnerCode) {
     const kit = d.kits.find((k) => k.code === input.partnerCode);
@@ -97,13 +102,16 @@ function getRef(d: Draft<DB>, id: string) {
   return r;
 }
 
-function pushNotice(r: Draft<Referral>) {
+function pushNotice(d: Draft<DB>, r: Draft<Referral>) {
   const t1 = tier1Status(r as Referral);
   if (r.notices.length && r.notices[r.notices.length - 1].type === t1) return; // nothing new to tell the referrer
+  const p = d.programs.find((x) => x.id === r.programId);
+  const extra = t1 === "On hold" ? p?.expectedReopen || undefined : t1 === "Redirected" ? r.redirectTo : undefined;
   r.notices.push({ at: clockNow(), type: t1, to: r.referrerEmail ?? "referrer", subject: `Update on referral ${r.id}`, text: `Your referral ${r.id} was updated: ${t1}.` });
+  mailReferrer(d, r, t1, extra);
 }
 
-/** BR06: the first attempt stops the clock; the referrer is told "In outreach". */
+/** BR06: the first attempt stops the clock; the referrer is told (In outreach / Contacted). */
 export function logAttempt(d: Draft<DB>, id: string, method: ContactAttempt["method"], outcome: ContactAttempt["outcome"]) {
   const r = getRef(d, id);
   const by = currentUser(d)?.name ?? "Intake";
@@ -117,7 +125,9 @@ export function logAttempt(d: Draft<DB>, id: string, method: ContactAttempt["met
     r.status = "Contacted";
   }
   if (!r.ownerId) r.ownerId = currentUser(d)?.id;
-  if (first || outcome === "Reached guardian") pushNotice(r);
+  if (first || outcome === "Reached guardian") pushNotice(d, r);
+  const me = currentUser(d);
+  if (me && outcome === "Reached guardian" && first) careActivity(d, me.id, `${me.firstName ?? me.name} made first contact on a referral from ${sourceName(d, r)}`, r.state);
   audit(d, { action: `Logged contact attempt (${method}: ${outcome})`, objectId: id, zone: "Care", category: "care" });
 }
 
@@ -132,14 +142,24 @@ export function setStatus(d: Draft<DB>, id: string, to: ReferralStatus, opts: { 
   if (opts.redirectTo) r.redirectTo = opts.redirectTo;
   if (!r.ownerId) r.ownerId = currentUser(d)?.id;
   r.history.push({ at: clockNow(), from, to, by, note: [opts.reason, opts.redirectTo && `to ${opts.redirectTo}`].filter(Boolean).join(" ") || undefined });
-  if (to === "Accepted" || to === "Hold" || to === "Redirected" || to === "Closed" || to === "Intake scheduled" || to === "Intake completed") pushNotice(r);
+  if (to === "Accepted" || to === "Hold" || to === "Redirected" || to === "Closed" || to === "Intake scheduled" || to === "Intake completed") pushNotice(d, r);
+  const me = currentUser(d);
+  const verb: Partial<Record<ReferralStatus, string>> = { Accepted: "accepted", Redirected: "redirected", "Intake scheduled": "scheduled an intake for", "Intake completed": "completed an intake for", Closed: "closed", Hold: "put on hold" };
+  if (me && verb[to]) careActivity(d, me.id, `${me.firstName ?? me.name} ${verb[to]} a referral from ${sourceName(d, r)}`, r.state);
   audit(d, { action: `Referral ${to.toLowerCase()}${opts.reason ? ` (${opts.reason})` : ""}`, objectId: id, zone: "Care", category: "care" });
 }
 
 export function assignOwner(d: Draft<DB>, id: string, userId: string) {
   const r = getRef(d, id);
+  const prev = r.ownerId;
   r.ownerId = userId;
-  audit(d, { action: "Assigned referral owner", objectId: id, zone: "Care", category: "care" });
+  const me = currentUser(d);
+  const to = d.users.find((u) => u.id === userId);
+  audit(d, { action: `Assigned referral owner (${to?.name ?? userId})`, objectId: id, zone: "Care", category: "care" });
+  if (to && me && to.id !== me.id && prev !== userId) {
+    notify(d, { toUserId: to.id, type: "task", text: `${me.firstName ?? me.name} assigned ${id} to you`, link: `/app/referral/?id=${id}` });
+    careActivity(d, me.id, `${me.firstName ?? me.name} reassigned 1 referral to ${to.firstName ?? to.name}`, r.state);
+  }
 }
 
 export function recordConsent(d: Draft<DB>, id: string, type: "signed_release" | "part2_consent") {
@@ -186,7 +206,12 @@ export function escalateOverdue(d: Draft<DB>, now: number): number {
     const c = clockFor(r as Referral, now, d.demo.clockMode, d.sla.find((s) => s.state === r.state) as DB["sla"][number] | undefined);
     if (c.state === "overdue") {
       r.escalatedAt = now;
-      notify(d, { toRole: "intake_sup", text: `${r.id} is overdue: escalated to you`, link: `/app/referral/?id=${r.id}` });
+      const sups = d.users.filter((u) => u.role === "intake_sup" && u.active && (u.scope.includes("ALL") || u.scope.includes(r.state === "XX" ? "NC" : r.state)));
+      for (const s of sups) {
+        notify(d, { toUserId: s.id, type: "escalation", text: `Overdue referral in ${r.queue}: ${r.id} escalated to you`, link: `/app/referral/?id=${r.id}` });
+        d.outbox.unshift({ id: `mail-esc-${r.id}-${s.id}`, at: now, type: "escalation", toUserId: s.id, to: s.email ?? "", toName: s.name, from: "Clarvida Referral Co-Pilot <no-reply@clarvida.example>", subject: `Overdue referral in ${r.queue}`, body: `Referral ${r.id} passed its 1-business-day response target and was escalated to you. Open it to reassign or call now.\n\nThis notice contains no client details.`, sentVia: "Simulated email (Demo Inbox)", link: `/app/referral/?id=${r.id}`, linkLabel: "Open the referral", relatedId: r.id, readBy: [] });
+      }
+      if (!sups.length) notify(d, { toRole: "intake_sup", type: "escalation", text: `${r.id} is overdue: escalated to you`, link: `/app/referral/?id=${r.id}` });
       audit(d, { action: "Escalated overdue referral to supervisor", objectId: r.id, zone: "Care", category: "care" });
       n++;
     }

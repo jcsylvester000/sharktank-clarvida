@@ -2,10 +2,11 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Building2, Info, Sparkles } from "lucide-react";
-import { useStore } from "@/lib/store/db";
+import { announce, useStore } from "@/lib/store/db";
 import { useLang } from "@/lib/i18n/lang";
 import { CONCERNS, COVERAGE, SRC_TYPES, TIMES } from "@/lib/i18n/partner";
-import { createReferral, countKitScan } from "@/lib/services/referrals";
+import { countKitScan } from "@/lib/services/referrals";
+import { referrals as api } from "@/mock-api";
 import { matchPrograms } from "@/lib/rules/routing";
 import { phiScan } from "@/lib/rules/phi";
 import { referralId } from "@/lib/rules/refs";
@@ -67,10 +68,10 @@ function ReferForm() {
 
   function validate(): Partial<Record<keyof Form, string>> {
     const e: Partial<Record<keyof Form, string>> = {};
-    if (!f.orgId) e.orgId = t.required;
-    if (f.orgId === "__none" && f.orgName.trim().length < 2) e.orgName = t.required;
-    if (!f.srcType) e.srcType = t.required;
-    if (f.role.trim().length < 2) e.role = t.required;
+    if (!f.orgId) e.orgId = t.reqOrg;
+    if (f.orgId === "__none" && f.orgName.trim().length < 2) e.orgName = t.reqOrgName;
+    if (!f.srcType) e.srcType = t.reqSrc;
+    if (f.role.trim().length < 2) e.role = t.reqRole;
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim());
     const phoneOk = f.phone.replace(/\D/g, "").length === 10;
     if (!f.email && !f.phone) e.email = t.emailOrPhone;
@@ -78,11 +79,11 @@ function ReferForm() {
       if (f.email && !emailOk) e.email = t.invalidEmail;
       if (f.phone && !phoneOk) e.phone = t.invalidPhone;
     }
-    if (!f.county) e.county = t.required;
-    if (!f.programId) e.programId = t.required;
+    if (!f.county) e.county = t.reqCounty;
+    if (!f.programId) e.programId = t.reqProgram;
     const age = Number(f.age);
     if (f.age === "" || !Number.isInteger(age) || age < 0 || age > 99) e.age = t.ageRange;
-    if (!f.coverage) e.coverage = t.required;
+    if (!f.coverage) e.coverage = t.reqCoverage;
     if (!/^[A-Za-zÀ-ÿ' -]{1,40}$/.test(f.guardian.trim()) || f.guardian.trim().includes(" ")) e.guardian = t.firstNameOnly;
     if (f.famPhone.replace(/\D/g, "").length !== 10) e.famPhone = t.invalidPhone;
     if (!f.agree) e.agree = t.mustAgree;
@@ -90,7 +91,7 @@ function ReferForm() {
     return e;
   }
 
-  function submit(ev: React.FormEvent) {
+  async function submit(ev: React.FormEvent) {
     ev.preventDefault();
     if (f.hp) return; // honeypot: silently ignore bots
     const e = validate();
@@ -110,49 +111,60 @@ function ReferForm() {
     setSending(true);
     const org = db.orgs.find((o) => o.id === f.orgId);
     const expectedId = referralId(f.state, db.refSeq);
-    let id = expectedId;
-    mutate(
-      (d) => {
-        id = createReferral(
-          d,
-          {
-            state: f.state,
-            county: f.county,
-            programId: f.programId === "__notsure" ? null : f.programId,
-            channel: "Web form",
-            partnerCode: kit?.code,
-            referrerOrgId: org?.id ?? null,
-            referrerOrgName: org ? undefined : f.orgName.trim(),
-            srcType: f.srcType as SourceType,
-            referrerName: f.name.trim() || undefined,
-            referrerRole: f.role.trim(),
-            referrerEmail: f.email.trim() || undefined,
-            referrerPhone: f.phone.trim() || undefined,
-            age: Number(f.age),
-            coverage: f.coverage,
-            language: f.language as "English" | "Español" | "Other",
-            times: f.times,
-            guardianFirstName: f.guardian.trim(),
-            phone: f.famPhone.trim(),
-            voicemailOk: f.voicemail,
-            consentAgreement: f.agree,
-            signedRelease: f.release,
-          },
-          { external: true },
-        );
+    const id = await api.submitReferral(
+      {
+        state: f.state,
+        county: f.county,
+        programId: f.programId === "__notsure" ? null : f.programId,
+        channel: "Web form",
+        partnerCode: kit?.code,
+        referrerOrgId: org?.id ?? null,
+        referrerOrgName: org ? undefined : f.orgName.trim(),
+        srcType: f.srcType as SourceType,
+        referrerName: f.name.trim() || undefined,
+        referrerRole: f.role.trim(),
+        referrerEmail: f.email.trim() || undefined,
+        referrerPhone: f.phone.trim() || undefined,
+        age: Number(f.age),
+        coverage: f.coverage,
+        language: f.language as "English" | "Español" | "Other",
+        times: f.times,
+        guardianFirstName: f.guardian.trim(),
+        phone: f.famPhone.trim(),
+        voicemailOk: f.voicemail,
+        consentAgreement: f.agree,
+        signedRelease: f.release,
       },
-      { entity: "referral", id: expectedId, action: "created" },
-    );
+      { external: true },
+    ).catch(() => expectedId);
+    announce({ entity: "referral", id, action: "created" });
     router.push(`/partner/confirmation/?ref=${encodeURIComponent(id)}`);
   }
+
+  function fillSample() {
+    const o = kitOrg ?? db.orgs.find((x) => x.id === "o3")!;
+    const prog = db.programs.find((p) => p.id === "p-nc-iih") ?? programs[0];
+    setLocked(Boolean(kitOrg));
+    setF({ ...EMPTY, orgId: o.id, srcType: ORG_TO_SRC[o.type] ?? "School", name: o.id === "o3" ? "Jordan Carter" : "", role: o.id === "o3" ? "Lead School Counselor" : "Caseworker", email: o.id === "o3" ? "jordan.carter@gcs.example" : "referrer@partner.example", phone: "", state: o.state, county: o.county, programId: prog?.id ?? "__notsure", age: "12", coverage: "Medicaid", language: "English", times: ["After 3:30 pm"], guardian: "Alex", famPhone: "(555) 010-0190", voicemail: true, agree: true, release: false, hp: "" });
+    setErrors({});
+  }
+
+  const office = (() => {
+    if (!f.county || f.county === "Not sure") return null;
+    const p = db.programs.find((x) => x.state === f.state && x.counties.includes(f.county));
+    return p ? `${p.office}, ${f.state}` : null;
+  })();
 
   const errCount = Object.keys(errors).filter((k) => k !== "form").length;
   const err = (k: keyof Form) => (errors[k] ? { "aria-invalid": true, "aria-describedby": `${k}-err` } : {});
   const label = (v: { v: string; es: string }) => (lang === "es" ? v.es : v.v);
 
   return (
-    <div data-guide="refer-form">
-      <h1 className="text-[1.9rem] leading-tight">{t.title}</h1>
+    <div data-guide="refer-form" className="rounded-[var(--radius-panel)] bg-surface px-5 py-7 shadow-sm sm:px-9 sm:py-9">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <h1 className="text-[1.9rem] leading-tight text-cv-teal">{t.title}</h1>
+        <button type="button" onClick={fillSample} className="link text-xs font-medium" data-guide="fill-sample">{t.fillSample}</button>
+      </div>
       <p className="mt-2 text-ink-2">{t.intro}</p>
 
       {code && !kit ? <Callout tone="warn" className="mt-5" icon={<Info size={16} />}>{t.unknownCode}</Callout> : null}
@@ -171,8 +183,8 @@ function ReferForm() {
 
         <input type="text" name="website" tabIndex={-1} autoComplete="off" value={f.hp} onChange={(e) => set("hp", e.target.value)} className="absolute -left-[9999px] h-0 w-0 opacity-0" aria-hidden="true" />
 
-        <fieldset className="rounded-lg border border-line bg-surface p-5">
-          <legend className="px-1 font-display text-lg font-semibold">{t.secReferrer}</legend>
+        <fieldset className="rounded-2xl border border-line p-5">
+          <legend className="px-1 text-lg font-semibold text-ink">{t.secReferrer}</legend>
           <div className="grid gap-4 sm:grid-cols-2">
             {!locked ? (
               <div className="sm:col-span-2">
@@ -224,8 +236,8 @@ function ReferForm() {
           </div>
         </fieldset>
 
-        <fieldset className="rounded-lg border border-line bg-surface p-5">
-          <legend className="px-1 font-display text-lg font-semibold">{t.secNeed}</legend>
+        <fieldset className="rounded-2xl border border-line p-5">
+          <legend className="px-1 text-lg font-semibold text-ink">{t.secNeed}</legend>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <Label htmlFor="state">{t.state}</Label>
@@ -242,6 +254,7 @@ function ReferForm() {
                 <option value="Not sure">{t.countyNotSure}</option>
               </Select>
               <FieldError id="county-err">{errors.county}</FieldError>
+              {office ? <Help>{t.nearestOffice}: {office}</Help> : null}
             </div>
             <div className="sm:col-span-2">
               <Label htmlFor="programId">{t.program}</Label>
@@ -315,8 +328,8 @@ function ReferForm() {
           </div>
         </fieldset>
 
-        <fieldset className="rounded-lg border border-line bg-surface p-5">
-          <legend className="px-1 font-display text-lg font-semibold">{t.secFamily}</legend>
+        <fieldset className="rounded-2xl border border-line p-5">
+          <legend className="px-1 text-lg font-semibold text-ink">{t.secFamily}</legend>
           <Callout tone="neutral" className="mb-4 bg-canvas" icon={<Info size={16} className="text-ink-3" />}>{t.minimum}</Callout>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
@@ -335,8 +348,8 @@ function ReferForm() {
           </div>
         </fieldset>
 
-        <fieldset className="rounded-lg border border-line bg-surface p-5">
-          <legend className="px-1 font-display text-lg font-semibold">{t.secConsent}</legend>
+        <fieldset className="rounded-2xl border border-line p-5">
+          <legend className="px-1 text-lg font-semibold text-ink">{t.secConsent}</legend>
           <div className="space-y-3">
             <div>
               <Checkbox label={t.agree} checked={f.agree} onChange={(e) => set("agree", e.target.checked)} aria-invalid={Boolean(errors.agree)} />
@@ -349,7 +362,7 @@ function ReferForm() {
           </div>
         </fieldset>
 
-        <Button type="submit" size="lg" className="w-full justify-center sm:w-auto" disabled={sending}>
+        <Button type="submit" variant="cta" size="lg" className="w-full justify-center sm:w-auto" disabled={sending} data-guide="send-referral">
           {sending ? t.sending : t.send}
         </Button>
       </form>

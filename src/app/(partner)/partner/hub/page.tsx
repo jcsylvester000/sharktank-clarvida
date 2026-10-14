@@ -10,6 +10,7 @@ import { businessElapsed } from "@/lib/rules/clock";
 import { Tier1Chip } from "@/components/domain/chips";
 import { Button } from "@/components/ui/button";
 import { SunState } from "@/components/brand/brand";
+import { statusLink } from "@/lib/services/notices";
 import { fmtShortDate, ago } from "@/lib/format";
 
 const H = 3_600_000;
@@ -71,7 +72,7 @@ export default function PartnerHub() {
               const p = data.programs.find((x) => x.id === r.programId);
               return (
                 <li key={r.id}>
-                  <Link href={`/partner/status/?ref=${r.id}`} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 hover:bg-canvas">
+                  <Link href={statusLink(r.id)} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 hover:bg-canvas">
                     <span className="min-w-0">
                       <span className="block font-mono text-sm font-semibold">{r.id}</span>
                       <span className="block text-sm text-ink-2">{p?.partnerLabel ?? "Program to be confirmed"} · sent {fmtShortDate(r.receivedAt)} ({ago(r.receivedAt, now)})</span>

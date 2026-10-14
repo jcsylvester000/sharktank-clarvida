@@ -3,6 +3,7 @@
 // on the Demo accounts card on the sign-in page).
 import type { AccountState, ActivityItem, Credential, DB, NotifType, Notification, OutboxMessage, User } from "@/lib/domain/types";
 import { hashPassword } from "@/lib/auth/crypto";
+import { statusLink } from "@/lib/rules/status-link";
 
 export const DEMO_PASSWORD = "Brighter2026!";
 
@@ -115,9 +116,9 @@ export function seedOutbox(now: number): OutboxMessage[] {
       body: "Good morning, Jon.\n\n1. Book a back-to-school check-in with D11 Student Wellness.\n2. Check in with the El Paso care coordination lead about wait times after the rate change.\n3. Introduce Clarvida to military family support groups near Fort Carson.\n\nThis briefing uses organization data only." }),
     m({ id: "mail-out-gcs", at: now - 30 * H, type: "outreach", fromUserId: "u-maria", from: "Maria Reyes <maria.reyes@clarvida.example>", to: "jordan.carter@gcs.example", toName: "Jordan Carter, Gaston County Schools", subject: "Thank you, and a quicker way to refer families", sentVia: CRM, relatedId: "o3", toUserId: "u-jordan",
       body: "Hi Jordan,\n\nThank you for the families your team has connected with Clarvida this fall. To make the next referral faster, your school now has its own referral link and QR code. It takes about a minute, and you will get a reference number and status updates without any client details.\n\nWarmly,\nMaria Reyes\nBrand Ambassador, Clarvida (Gastonia)\n\nClarvida, 513 Prince Edward Street, Suite 101, Fredericksburg, VA 22401. You are receiving this because you work with Clarvida as a referral partner. Unsubscribe: reply STOP." }),
-    m({ id: "mail-ref-24799", at: now - 3 * D + 4 * H, type: "referrer-notice", to: "a.lewis@dss.example", toName: "A. Lewis, Gaston County DHHS", subject: "Update on referral REF-NC-24799", sentVia: SIM, relatedId: "REF-NC-24799", link: "/partner/status/?ref=REF-NC-24799", linkLabel: "View status",
+    m({ id: "mail-ref-24799", at: now - 3 * D + 4 * H, type: "referrer-notice", to: "a.lewis@dss.example", toName: "A. Lewis, Gaston County DHHS", subject: "Update on referral REF-NC-24799", sentVia: SIM, relatedId: "REF-NC-24799", link: statusLink("REF-NC-24799"), linkLabel: "View status",
       body: "Your referral REF-NC-24799 was updated: Contacted.\n\nWe reached the family within 1 business day. For privacy, this message does not include any client details. Use the secure link to see the current status." }),
-    m({ id: "mail-ref-24811", at: now - 6.5 * H + 60_000, type: "referrer-notice", toUserId: "u-jordan", to: "jordan.carter@gcs.example", toName: "Jordan Carter", subject: "We received your referral REF-NC-24811", sentVia: SIM, relatedId: "REF-NC-24811", link: "/partner/status/?ref=REF-NC-24811", linkLabel: "View status",
+    m({ id: "mail-ref-24811", at: now - 6.5 * H + 60_000, type: "referrer-notice", toUserId: "u-jordan", to: "jordan.carter@gcs.example", toName: "Jordan Carter", subject: "We received your referral REF-NC-24811", sentVia: SIM, relatedId: "REF-NC-24811", link: statusLink("REF-NC-24811"), linkLabel: "View status",
       body: "Thank you. Your referral REF-NC-24811 was received and routed to our Gastonia team. We will contact the family within 1 business day.\n\nFor privacy, this message does not include any client details." }),
     m({ id: "mail-esc-ray", at: now - 1.5 * H, type: "escalation", toUserId: "u-ray", to: "ray.mendez@clarvida.example", toName: "Ray Mendez", subject: "Overdue referral in NC-Gastonia-Child", sentVia: SIM, link: "/app/intake/", linkLabel: "Open the Intake Queue",
       body: "One referral in NC-Gastonia-Child passed its 1-business-day response target and was escalated to you. Open the Intake Queue to reassign it.\n\nThis notice contains no client details." }),

@@ -97,7 +97,7 @@ describe("BR07–BR11 status and disclosure", () => {
   it("tier 1 words", () => {
     expect(tier1Status({ status: "New", attempts: [] })).toBe("Received");
     expect(tier1Status({ status: "Hold", attempts: [] })).toBe("On hold");
-    expect(tier1Status({ status: "Accepted", attempts: [{ at: 1, method: "Phone", outcome: "Reached guardian", by: "x" }] })).toBe("In outreach");
+    expect(tier1Status({ status: "Accepted", attempts: [{ at: 1, method: "Phone", outcome: "Reached guardian", by: "x" }] })).toBe("Contacted");
   });
   it("unable to contact after 3 failed attempts", () => {
     const a = { at: 1, method: "Phone" as const, outcome: "No answer" as const, by: "x" };

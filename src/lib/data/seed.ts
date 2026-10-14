@@ -5,7 +5,7 @@ import type { DB, Organization, Program, Referral, User, ContactAttempt, StatusE
 import { ACCOUNTS, seedAccounts, seedActivity, seedOutbox, seedPersonalNotifications } from "@/lib/data/accounts";
 
 export const SCHEMA_VERSION = 4; // v3 build (accounts, inbox, activity). Bump to force a clean re-seed (NF-07).
-export const FIRST_REF_SEQ = 24817;
+export const FIRST_REF_SEQ = 24818; // first live referral is REF-NC-24818 (JR-05.02)
 
 const H = 3_600_000;
 const D = 24 * H;
@@ -92,7 +92,7 @@ export function makeSeed(now: number = Date.now()): DB {
     consentAgreement: true, signedRelease: false, part2Consent: false, attempts: [], history: [], notices: [], dupOf: null, ...r,
   });
   const referrals: Referral[] = [
-    refBase({ id: "REF-NC-24806", programId: "p-nc-fct", referrerOrgId: "o1", srcType: "Child welfare", referrerName: "A. Lewis", referrerRole: "Caseworker", referrerEmail: "a.lewis@dss.example", age: 9, guardianFirstName: "Avery (synthetic)", phone: "(555) 010-0311", receivedAt: now - 9.5 * H, status: "New", queue: "NC-Gastonia-Child" }),
+    refBase({ id: "REF-NC-24806", programId: "p-nc-fct", referrerOrgId: "o1", srcType: "Child welfare", referrerName: "A. Lewis", referrerRole: "Caseworker", referrerEmail: "a.lewis@dss.example", age: 9, guardianFirstName: "Avery (synthetic)", phone: "(555) 010-0311", receivedAt: now - 9.5 * H, escalatedAt: now - 1.5 * H, status: "New", queue: "NC-Gastonia-Child" }),
     refBase({ id: "REF-NC-24811", programId: "p-nc-iih", referrerOrgId: "o3", srcType: "School", partnerCode: "GCS-NC-2026", referrerName: "J. Carter", referrerRole: "Lead School Counselor", referrerEmail: "jordan.carter@gcs.example", age: 12, guardianFirstName: "Morgan (synthetic)", phone: "(555) 010-0388", receivedAt: now - 6.5 * H, status: "New", queue: "NC-Gastonia-Child", times: ["Weekday mornings"] }),
     refBase({ id: "REF-NC-24813", programId: "p-nc-sud", referrerOrgId: "o6", srcType: "Court / legal", referrerName: "D. Price", referrerRole: "Court counselor", referrerEmail: "d.price@courts.example", age: 16, guardianFirstName: "Riley (synthetic)", phone: "(555) 010-0412", receivedAt: now - 3 * H, status: "New", queue: "NC-Gastonia-Child" }),
     refBase({ id: "REF-NC-24814", programId: "p-nc-iih", referrerOrgId: null, referrerOrgName: "Parent (self-referral)", srcType: "Family / self", referrerRole: "Parent", channel: "Phone", age: 10, guardianFirstName: "Casey (synthetic)", phone: "(555) 010-0388", receivedAt: now - 1 * H, status: "New", queue: "NC-Gastonia-Child", dupOf: "REF-NC-24811" }),
@@ -114,7 +114,7 @@ export function makeSeed(now: number = Date.now()): DB {
     if (r.firstContactAt) {
       a.push({ at: r.firstContactAt, method: "Phone", outcome: "Reached guardian", by: "Dana Kim" });
       h.push({ at: r.firstContactAt, to: "Contacted", from: "New", by: "Dana Kim", note: "Phone: Reached guardian" });
-      n.push({ at: r.firstContactAt + 60_000, type: "In outreach", to: r.referrerEmail ?? "referrer", subject: `Update on referral ${r.id}`, text: `Your referral ${r.id} was updated: In outreach.` });
+      n.push({ at: r.firstContactAt + 60_000, type: "Contacted", to: r.referrerEmail ?? "referrer", subject: `Update on referral ${r.id}`, text: `Your referral ${r.id} was updated: Contacted.` });
     }
     if (r.status === "Hold") h.push({ at: r.receivedAt + 1 * H, from: "New", to: "Hold", by: "Dana Kim", note: "Waitlist" });
     if (r.status === "Intake scheduled" || r.status === "Intake completed") h.push({ at: r.receivedAt + 6 * H, from: "Contacted", to: "Intake scheduled", by: "Dana Kim" });

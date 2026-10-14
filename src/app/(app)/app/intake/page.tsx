@@ -147,7 +147,7 @@ function Queue() {
               <Copy size={14} /> Open partner form in a new window
             </Button>
             {!readOnly ? (
-              <Link href={href("/app/referral/new")} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-care px-3 text-[0.8125rem] font-medium text-white hover:bg-care-strong">
+              <Link href={href("/app/referral/new")} className="inline-flex h-8 items-center gap-1.5 rounded-full bg-care px-3.5 text-[0.8125rem] font-semibold text-white hover:bg-care-strong">
                 <PhoneIncoming size={14} /> New phone or fax referral
               </Link>
             ) : null}
@@ -158,11 +158,12 @@ function Queue() {
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Waiting for first contact" value={counts.waiting} onClick={() => setFilter(filter === "waiting" ? "all" : "waiting")} active={filter === "waiting"} />
         <Stat label="Due soon" value={counts.dueSoon} tone={counts.dueSoon ? "warn" : undefined} sub="2 business hours or less" onClick={() => setFilter(filter === "due_soon" ? "all" : "due_soon")} active={filter === "due_soon"} />
-        <Stat label="Overdue, escalated" value={counts.overdue} tone={counts.overdue ? "crit" : undefined} sub="Supervisor notified" onClick={() => setFilter(filter === "overdue" ? "all" : "overdue")} active={filter === "overdue"} />
+        <Stat label="Overdue, escalated" value={counts.overdue} tone={counts.overdue ? "warn" : undefined} sub="Supervisor notified" onClick={() => setFilter(filter === "overdue" ? "all" : "overdue")} active={filter === "overdue"} />
         <Stat label="On hold" value={counts.hold} sub="Waitlist or awaiting information" onClick={() => setFilter(filter === "hold" ? "all" : "hold")} active={filter === "hold"} />
       </div>
 
-      <div className="rounded-lg border border-line bg-surface" data-guide="queue">
+      <NextBestCall rows={rows.map((x) => x.r)} now={now} />
+      <div className="rounded-2xl border border-line bg-surface" data-guide="queue">
         <div className="flex flex-wrap items-center gap-3 border-b border-line-2 px-4 py-3">
           <Label htmlFor="q" className="sr-only">Queue</Label>
           <Select id="q" value={queue} onChange={(e) => setQueue(e.target.value)} className="h-9 w-auto min-w-64">
@@ -181,7 +182,7 @@ function Queue() {
                 <TH>Reference</TH>
                 <TH className="min-w-[11rem]">Program</TH>
                 <TH>Source</TH>
-                <TH className="hidden text-right 2xl:table-cell">Age</TH>
+                <TH className="hidden text-right 2xl:table-cell">Waiting</TH>
                 <TH>Response clock</TH>
                 <TH>Status</TH>
                 <TH>Owner</TH>
@@ -203,8 +204,8 @@ function Queue() {
                       <span className="font-mono text-[0.85rem] font-medium">{r.id}</span>
                       <div className="mt-1 flex flex-wrap gap-1">
                         {isNew ? <Badge tone="hl">Just arrived</Badge> : null}
-                        {r.dupOf ? <Badge tone="warn" className="whitespace-normal">Possible duplicate of {r.dupOf}</Badge> : null}
-                        {r.escalatedAt && r.status === "New" && !r.firstContactAt ? <Badge tone="crit">Escalated</Badge> : null}
+                        {r.dupOf ? <Badge tone="charcoal" className="whitespace-normal">Possible duplicate of {r.dupOf}</Badge> : null}
+                        {r.escalatedAt && r.status === "New" && !r.firstContactAt ? <Badge tone="hl">Escalated</Badge> : null}
                       </div>
                     </TD>
                     <TD>
@@ -286,5 +287,29 @@ export default function Page() {
     <Suspense>
       <Queue />
     </Suspense>
+  );
+}
+
+/** FT-096 Next best call: the open referral with the least time left whose family prefers to be called now. */
+function NextBestCall({ rows, now }: { rows: Referral[]; now: number }) {
+  const db = useStore((s) => s.db);
+  const open = rows
+    .filter((r) => r.status === "New")
+    .map((r) => ({ r, c: clockFor(r, now, db.demo.clockMode, db.sla.find((s) => s.state === r.state)) }))
+    .filter((x) => x.c.state !== "stopped")
+    .sort((a, b) => a.c.leftMs - b.c.leftMs);
+  const best = open[0];
+  if (!best) return null;
+  const hour = new Date(now).getHours();
+  const fits = best.r.times.some((t) => (/morning/i.test(t) && hour < 12) || (/after 3:30|afternoon/i.test(t) && hour >= 15) || /evening/i.test(t) === (hour >= 17));
+  return (
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-teal/30 bg-cv-ice px-4 py-3" data-guide="next-best-call">
+      <p className="text-sm">
+        <span className="font-semibold text-teal-strong">Next best call: </span>
+        <span className="font-mono font-semibold">{best.r.id}</span>
+        <span className="text-ink-2"> · {best.c.state === "overdue" ? "overdue" : best.c.state === "due_soon" ? "due soon" : "least time left"}{best.r.times.length ? ` · best time: ${best.r.times.join(", ").toLowerCase()}${fits ? " (now)" : ""}` : ""}</span>
+      </p>
+      <Link href={href("/app/referral", { id: best.r.id })} className="inline-flex h-9 items-center rounded-full bg-care px-4 text-sm font-semibold text-white hover:bg-care-strong">Open and call</Link>
+    </div>
   );
 }

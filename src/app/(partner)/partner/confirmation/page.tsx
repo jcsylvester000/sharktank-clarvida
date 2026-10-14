@@ -2,11 +2,13 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { CheckCircle2, Copy, Mail } from "lucide-react";
+import { Copy, Mail } from "lucide-react";
 import { useStore } from "@/lib/store/db";
 import { useLang } from "@/lib/i18n/lang";
 import { tier1Status } from "@/lib/rules/status";
 import { Button } from "@/components/ui/button";
+import { statusLink } from "@/lib/services/notices";
+import { LogoSymbol, SunCircle } from "@/components/brand/brand";
 
 function Confirmation() {
   const params = useSearchParams();
@@ -29,13 +31,14 @@ function Confirmation() {
 
   return (
     <div className="space-y-5">
-      <section className="rounded-lg border border-line bg-surface p-6">
-        <div className="flex items-center gap-2 text-ok">
-          <CheckCircle2 size={22} />
-          <h1 className="text-2xl text-ink">{t.receivedTitle}</h1>
+      <section className="relative overflow-hidden rounded-[var(--radius-panel)] bg-surface px-6 py-8 shadow-sm sm:px-9" data-guide="confirmation">
+        <SunCircle size={130} soft={false} className="absolute -right-8 -top-10 opacity-90" />
+        <div className="relative flex items-center gap-3">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-cv-ice"><LogoSymbol size={28} /></span>
+          <h1 className="text-[1.9rem] leading-tight text-cv-teal">{t.receivedTitle}</h1>
         </div>
         <div className="mt-5 flex flex-wrap items-center gap-3">
-          <span className="rounded-md bg-sunken px-4 py-2 font-mono text-2xl font-medium tracking-wide">{r.id}</span>
+          <span className="rounded-2xl bg-cv-ice px-5 py-2.5 font-mono text-2xl font-bold tracking-wide text-cv-navy">{r.id}</span>
           <Button
             variant="secondary"
             size="sm"
@@ -48,10 +51,10 @@ function Confirmation() {
             <Copy size={14} /> {copied ? t.copied : t.copy}
           </Button>
         </div>
-        <p className={onHold ? "mt-4 rounded-md bg-warn-tint px-3 py-2 text-warn" : "mt-4 text-lg"}>{onHold ? t.holdPromise : t.promise}</p>
+        <p className={onHold ? "mt-4 rounded-xl bg-hl-tint px-3 py-2 text-warn" : "mt-4 text-lg"}>{onHold ? t.holdPromise : t.promise}</p>
       </section>
 
-      <section className="rounded-lg border border-line bg-surface p-6">
+      <section className="rounded-2xl border border-line bg-surface p-6">
         <h2 className="text-lg">{t.next}</h2>
         <ol className="mt-3 space-y-2 text-ink-2">
           {[t.next1, t.next2, t.next3].map((x, i) => (
@@ -64,7 +67,7 @@ function Confirmation() {
       </section>
 
       {notice && r.referrerEmail ? (
-        <section className="rounded-lg border border-dashed border-line bg-surface p-5">
+        <section className="rounded-2xl border border-dashed border-line bg-surface p-5">
           <p className="flex items-center gap-2 text-sm text-ink-2">
             <Mail size={15} /> {t.emailSent} {r.referrerEmail}
           </p>
@@ -77,10 +80,10 @@ function Confirmation() {
       ) : null}
 
       <div className="flex flex-wrap gap-3">
-        <Link href={`/partner/status/?ref=${encodeURIComponent(r.id)}`} className="inline-flex h-11 items-center rounded-md bg-teal px-5 font-medium text-white hover:bg-teal-strong">
-          {t.track}
+        <Link href={statusLink(r.id)} className="inline-flex h-12 items-center rounded-full bg-cv-amber px-6 font-semibold text-cv-ink hover:bg-[#f2aa00]">
+          {t.track} ›
         </Link>
-        <Link href={`/partner/refer/${kitCode ? `?code=${encodeURIComponent(kitCode)}` : ""}`} className="inline-flex h-11 items-center rounded-md border border-line bg-surface px-5 font-medium hover:bg-sunken">
+        <Link href={`/partner/refer/${kitCode ? `?code=${encodeURIComponent(kitCode)}` : ""}`} className="inline-flex h-12 items-center rounded-full border border-teal/40 bg-surface px-6 font-semibold text-teal-strong hover:bg-teal-tint">
           {t.referAnother}
         </Link>
       </div>

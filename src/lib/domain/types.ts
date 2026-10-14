@@ -56,7 +56,7 @@ export type ReferralStatus =
   | "Intake completed"
   | "Closed";
 
-export type Tier1Status = "Received" | "In outreach" | "On hold" | "Redirected" | "Closed";
+export type Tier1Status = "Received" | "In outreach" | "Contacted" | "On hold" | "Redirected" | "Closed";
 export type Channel = "Web form" | "Phone" | "Fax" | "Statewide platform" | "Walk-in";
 
 export interface User {

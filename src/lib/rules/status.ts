@@ -35,10 +35,10 @@ export function tier1Status(r: Pick<Referral, "status" | "attempts">): Tier1Stat
     case "Redirected": return "Redirected";
     case "Closed": return "Closed";
     case "New":
-    case "Accepted":
       return r.attempts.length ? "In outreach" : "Received";
     default:
-      return "In outreach";
+      // FT-091 Tier 1 words: received, contacted, closed (plus honest hold / redirect).
+      return r.attempts.some((a) => a.outcome === "Reached guardian") || r.status !== "Accepted" ? "Contacted" : "In outreach";
   }
 }
 

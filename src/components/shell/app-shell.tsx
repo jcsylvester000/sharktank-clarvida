@@ -14,6 +14,8 @@ import { useCurrentUser, useNow } from "@/lib/store/hooks";
 import { MODULES, PAGES, ROLE_LABEL, accessForUser, href, landingFor, pageForPath, rolesThatCanOpen, DASHBOARD_NAME, type PageDef } from "@/lib/access";
 import { audit, notificationsFor } from "@/lib/services/core";
 import { rememberPage } from "@/lib/services/account";
+import { escalateOverdue } from "@/lib/services/referrals";
+import { clockFor } from "@/lib/rules/clock";
 import { auth, account } from "@/mock-api";
 import { latencyMs } from "@/mock-api/http";
 import { ZoneBadge } from "@/components/domain/chips";
@@ -73,6 +75,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }, undefined, { allowReadOnly: true });
   }, [user, page, access, mutate, routeKey, search]);
 
+  // FT-087: clock check on load and every minute; the first breach escalates once to the intake supervisor.
+  useEffect(() => {
+    if (!user || user.readOnly || live) return;
+    const check = () => {
+      const st = useStore.getState();
+      const t = Date.now();
+      const due = st.db.referrals.some((r) => !r.escalatedAt && r.status === "New" && clockFor(r, t, st.db.demo.clockMode, st.db.sla.find((x) => x.state === r.state)).state === "overdue");
+      if (due) st.mutate((d) => { escalateOverdue(d, t); }, { entity: "referral", action: "escalated" }, { allowReadOnly: true });
+    };
+    check();
+    const i = setInterval(check, 60_000);
+    return () => clearInterval(i);
+  }, [user, live]);
+
   // Live arrival toasts for intake roles.
   useEffect(() => {
     return onRemoteChange((m) => {
@@ -130,8 +146,10 @@ function Sidebar({ user, current, live, className, onNavigate, mobile }: { user:
           aria-current={current?.id === "PG-06" ? "page" : undefined}
         >
           <LayoutDashboard size={17} className={current?.id === "PG-06" ? "text-teal" : ""} />
-          <span className="flex-1">{live ? "Live Operations" : `My dashboard`}</span>
-          {!live ? <span className="text-[11px] font-normal text-ink-3">{DASHBOARD_NAME[user.role]}</span> : null}
+          <span className="flex-1 leading-tight">
+            {live ? "Live Operations" : "My dashboard"}
+            {!live ? <span className="block text-[11px] font-normal text-ink-3">{DASHBOARD_NAME[user.role]}</span> : null}
+          </span>
         </Link>
         {MODULES.map((m) => {
           const list = items.filter((p) => p.module === m);

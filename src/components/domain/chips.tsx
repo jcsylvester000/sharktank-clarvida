@@ -3,15 +3,16 @@ import type { Capacity, ReferralStatus, Stage, Tier1Status, Zone } from "@/lib/d
 import { Badge, type Tone } from "@/components/ui/badge";
 import { statusLabel } from "@/lib/rules/status";
 
+// Calm status palette (AC-BR-05): no red or green; amber is kept for a clock about to breach.
 const STATUS_TONE: Record<ReferralStatus, Tone> = {
-  New: "teal",
-  Contacted: "neutral",
-  Accepted: "ok",
-  Hold: "warn",
-  Redirected: "neutral",
-  "Intake scheduled": "ok",
-  "Intake completed": "ok",
-  Closed: "outline",
+  New: "lightsky",
+  Contacted: "solid",
+  Accepted: "sky",
+  Hold: "neutral",
+  Redirected: "outline",
+  "Intake scheduled": "solid",
+  "Intake completed": "solid",
+  Closed: "charcoal",
 };
 
 export function StatusChip({ status }: { status: ReferralStatus }) {
@@ -20,17 +21,17 @@ export function StatusChip({ status }: { status: ReferralStatus }) {
   return <Badge tone={STATUS_TONE[status]} icon={icon}>{statusLabel(status)}</Badge>;
 }
 
-const TIER1_TONE: Record<Tier1Status, Tone> = { Received: "teal", "In outreach": "ok", "On hold": "warn", Redirected: "neutral", Closed: "outline" };
+const TIER1_TONE: Record<Tier1Status, Tone> = { Received: "lightsky", "In outreach": "sky", Contacted: "solid", "On hold": "neutral", Redirected: "outline", Closed: "charcoal" };
 export function Tier1Chip({ status }: { status: Tier1Status }) {
   return <Badge tone={TIER1_TONE[status]}>{status}</Badge>;
 }
 
-const STAGE_TONE: Record<Stage, Tone> = { Active: "ok", Engaged: "ok", New: "outline", Quiet: "warn", "At risk": "crit", Dormant: "crit" };
+const STAGE_TONE: Record<Stage, Tone> = { Active: "solid", Engaged: "sky", New: "lightsky", Quiet: "hl", "At risk": "hl", Dormant: "charcoal" };
 export function StageChip({ stage }: { stage: Stage }) {
   return <Badge tone={STAGE_TONE[stage]} icon={stage === "At risk" ? <AlertTriangle size={12} /> : undefined}>{stage}</Badge>;
 }
 
-const CAP_TONE: Record<Capacity, Tone> = { Open: "ok", Limited: "warn", Waitlist: "crit", Closed: "crit" };
+const CAP_TONE: Record<Capacity, Tone> = { Open: "solid", Limited: "sky", Waitlist: "hl", Closed: "charcoal" };
 export function CapacityChip({ capacity, stale }: { capacity: Capacity; stale?: boolean }) {
   return (
     <span className="inline-flex items-center gap-1.5">
