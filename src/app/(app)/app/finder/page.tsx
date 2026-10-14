@@ -2,7 +2,11 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { CirclePause, List, Map as MapIcon, Route, ArrowUpRight, Database } from "lucide-react";
+import { CirclePause, List, Map as MapIcon, ArrowUpRight, Database, Expand } from "lucide-react";
+import { OsmMap, type MapMarker } from "@/components/map/osm-map";
+import { STAGE_PIN, TYPE_GLYPH } from "@/components/map/map-style";
+import { OFFICES, driveMinutes, orgPoint } from "@/lib/geo";
+import { Switch } from "@/components/ui/overlays";
 import { useStore } from "@/lib/store/db";
 import { useCurrentUser, useNow } from "@/lib/store/hooks";
 import { href } from "@/lib/access";
@@ -22,7 +26,6 @@ import { cn } from "@/components/ui/cn";
 
 type Row = { org: Organization; fit: FitResult };
 const STAGES: Stage[] = ["At risk", "Quiet", "Dormant", "New", "Engaged", "Active"];
-const STAGE_FILL: Record<Stage, string> = { "At risk": "var(--color-crit)", Quiet: "var(--color-warn)", Dormant: "#b45d4f", New: "var(--color-ink-3)", Engaged: "var(--color-teal)", Active: "var(--color-ok)" };
 
 export default function Finder() {
   const me = useCurrentUser()!;
@@ -36,10 +39,12 @@ export default function Finder() {
   const officePrograms = db.programs.filter((p) => p.state === office.state && p.office === office.name.split(",")[0]);
   const [programId, setProgramId] = useState(officePrograms.find((p) => p.name === "Foster Care")?.id ?? officePrograms[0]?.id ?? "");
   const program = db.programs.find((p) => p.id === programId);
-  const [view, setView] = useState<"list" | "map">("list");
+  const [view, setView] = useState<"list" | "map">("map");
+  const [hidePaused, setHidePaused] = useState(true);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [types, setTypes] = useState<OrgType[]>([]);
   const [stages, setStages] = useState<Stage[]>([]);
-  const [radius, setRadius] = useState<"10" | "25" | "all">("25");
+  const [radius, setRadius] = useState<"5" | "10" | "25">("10");
   const paused = isPaused(program);
 
   const rows: Row[] = useMemo(() => {
@@ -50,10 +55,22 @@ export default function Finder() {
       .sort((a, b) => b.fit.score - a.fit.score);
   }, [db.orgs, db.gatekeeperWeights, db.programs, office.state, program, now]);
 
+  // FT-051: organizations whose referrals go only to paused programs are hidden when "Hide paused programs" is on.
+  const pausedOnly = (o: Organization) => {
+    const tied = ORG_PROGRAMS[o.type]?.map((code) => db.programs.find((p) => p.state === o.state && p.name.startsWith(code))).filter(Boolean) ?? [];
+    return tied.length > 0 && tied.every((p) => isPaused(p!));
+  };
   const filtered = rows.filter(({ org }) =>
     (types.length === 0 || types.includes(org.type)) &&
     (stages.length === 0 || stages.includes(org.stage)) &&
-    (radius === "all" || org.distanceMiles <= Number(radius)));
+    org.distanceMiles <= Number(radius) &&
+    (!hidePaused || !pausedOnly(org)));
+  const hiddenPaused = rows.filter(({ org }) => org.distanceMiles <= Number(radius) && pausedOnly(org)).length;
+  const officePoint = OFFICES.find((o) => o.locationId === officeId) ?? OFFICES[0];
+  const markers: MapMarker[] = [
+    ...filtered.map(({ org, fit }) => ({ id: org.id, ...orgPoint(org), label: `${org.name} · fit ${fit.score}`, glyph: TYPE_GLYPH[org.type], color: STAGE_PIN[org.stage].fill, ring: STAGE_PIN[org.stage].ring, selected: org.id === selectedId })),
+    { ...officePoint, id: "office", label: officePoint.name, shape: "office" as const, color: "#1d7fa3" },
+  ];
   const allTypes = Array.from(new Set(rows.map((r) => r.org.type)));
 
   const viewBreakdown = (orgId: string) => mutate((d) => audit(d, { action: "Viewed score breakdown", objectId: orgId, zone: "Outreach" }));
@@ -64,10 +81,10 @@ export default function Finder() {
       <PageHeader
         title="Gatekeeper Finder"
         description="The institutions that control referrals near your office, ranked by fit. Every score explains itself; no black box."
-        actions={<Segmented label="View" value={view} onChange={setView} options={[{ value: "list", label: <span className="inline-flex items-center gap-1.5"><List size={14} /> List</span> }, { value: "map", label: <span className="inline-flex items-center gap-1.5"><MapIcon size={14} /> Map</span> }]} />}
+        actions={<Segmented label="View" value={view} onChange={setView} options={[{ value: "map", label: <span className="inline-flex items-center gap-1.5"><MapIcon size={14} /> Map and list</span> }, { value: "list", label: <span className="inline-flex items-center gap-1.5"><List size={14} /> List only</span> }]} />}
       />
 
-      <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border border-line bg-surface p-4">
+      <div className="mb-4 flex flex-wrap items-end gap-3 rounded-2xl border border-line bg-surface p-4">
         <div>
           <Label htmlFor="office">Office</Label>
           <Select id="office" value={officeId} onChange={(e) => { setOfficeId(e.target.value); const loc = db.locations.find((l) => l.id === e.target.value)!; const first = db.programs.find((p) => p.state === loc.state && p.office === loc.name.split(",")[0]); setProgramId(first?.id ?? ""); }} className="mt-1 w-56">
@@ -82,17 +99,19 @@ export default function Finder() {
         </div>
         <div>
           <p className="text-sm font-medium">Radius</p>
-          <Segmented label="Radius" className="mt-1" value={radius} onChange={setRadius} options={[{ value: "10", label: "10 mi" }, { value: "25", label: "25 mi" }, { value: "all", label: "All" }]} />
+          <Segmented label="Radius" className="mt-1" value={radius} onChange={setRadius} options={[{ value: "5", label: "5 mi" }, { value: "10", label: "10 mi" }, { value: "25", label: "25 mi" }]} />
         </div>
         <FilterMenu label="Organization type" all={allTypes} value={types} onChange={setTypes} />
         <FilterMenu label="Relationship stage" all={STAGES} value={stages} onChange={setStages} />
+        <div className="pb-2"><Switch checked={hidePaused} onCheckedChange={setHidePaused} label={`Hide paused programs${hiddenPaused ? ` (${hiddenPaused} hidden)` : ""}`} /></div>
         {(types.length || stages.length) ? <Button variant="link" size="sm" onClick={() => { setTypes([]); setStages([]); }}>Clear filters</Button> : null}
         <p className="ml-auto flex items-center gap-1.5 text-xs text-ink-3"><Database size={13} /> Public data: NPPES, NCES, IRS nonprofit file, state lists</p>
+        <Link href={`/app/map/`} className="link inline-flex items-center gap-1 text-sm font-medium"><Expand size={14} /> Open in Map Explorer</Link>
       </div>
 
       {paused && program ? (
-        <Callout tone="crit" className="mb-4" icon={<CirclePause size={18} className="text-crit" />} title={`${program.name} is on ${program.capacity}: outreach paused`}
-          action={<Link href={href("/app/capacity")} className="text-sm font-medium text-crit hover:underline">Capacity Board</Link>}>
+        <Callout tone="neutral" className="mb-4 border-cv-amber bg-hl-tint" icon={<CirclePause size={18} className="text-warn" />} title={`${program.name} is on ${program.capacity}: outreach paused`}
+          action={<Link href={href("/app/capacity")} className="link text-sm font-medium">Capacity Board</Link>}>
           Updated {Math.round((now - program.capacityUpdatedAt) / 86_400_000)} days ago by {db.users.find((u) => u.id === program.capacityUpdatedBy)?.name}. You can still view the list; drafts are turned off until it reopens.
         </Callout>
       ) : null}
@@ -100,8 +119,19 @@ export default function Finder() {
       <div data-guide="finder">
         {filtered.length === 0 ? (
           <Empty title="No organizations match these filters">Widen the radius or clear the filters.</Empty>
-        ) : view === "list" ? (
-          <div className="rounded-lg border border-line bg-surface">
+        ) : (
+          <div className={cn(view === "map" && "grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]")}>
+          {view === "map" ? (
+            <div className="overflow-hidden rounded-2xl border border-line bg-surface xl:sticky xl:top-[120px] xl:self-start">
+              <OsmMap center={officePoint} zoom={radius === "25" ? 10 : radius === "10" ? 11 : 12} markers={markers}
+                circles={[{ id: "ring", lat: officePoint.lat, lng: officePoint.lng, radiusMi: Number(radius), color: "#1d7fa3", fill: 0.05, label: `${radius} mi` }]}
+                onMarkerClick={(id) => { if (id !== "office") { setSelectedId(id); document.getElementById(`row-${id}`)?.scrollIntoView({ block: "center", behavior: "smooth" }); } }}
+                focus={selectedId ? orgPoint(db.orgs.find((o) => o.id === selectedId)!) : null}
+                className="h-[420px] w-full xl:h-[560px]" ariaLabel={`Map of ranked organizations around ${office.name}`} />
+              <p className="border-t border-line-2 px-3 py-2 text-[11px] text-ink-3">Pins coloured by relationship stage; amber is the selected organization. Locations illustrative. © OpenStreetMap contributors.</p>
+            </div>
+          ) : null}
+          <div className="rounded-2xl border border-line bg-surface">
             <Table>
               <THead>
                 <tr>
@@ -110,14 +140,14 @@ export default function Finder() {
                   <TH>Fit</TH>
                   <TH className="min-w-[18rem]">Why</TH>
                   <TH>Stage</TH>
-                  <TH className="text-right">Distance</TH>
-                  <TH>Sources</TH>
+                  <TH className="text-right">Drive</TH>
+                  <TH className={cn(view === "map" && "hidden")}>Sources</TH>
                   <TH />
                 </tr>
               </THead>
               <tbody>
                 {filtered.map(({ org, fit }, i) => (
-                  <TR key={org.id}>
+                  <TR key={org.id} id={`row-${org.id}`} onClick={() => setSelectedId(org.id)} className={cn("cursor-pointer", org.id === selectedId && "bg-hl-tint")}>
                     <TD className="text-right text-ink-3 tabular">{i + 1}</TD>
                     <TD>
                       <Link href={href("/app/organization", { id: org.id })} className="font-medium hover:underline">{org.name}</Link>
@@ -134,8 +164,8 @@ export default function Finder() {
                       ) : null}
                     </TD>
                     <TD><StageChip stage={org.stage} /></TD>
-                    <TD className="text-right tabular whitespace-nowrap">{org.distanceMiles} mi</TD>
-                    <TD><div className="flex max-w-[12rem] flex-wrap gap-1">{org.sources.map((s) => <Badge key={s} tone="outline" className="text-[0.7rem]">{s}</Badge>)}</div></TD>
+                    <TD className="text-right tabular whitespace-nowrap">{driveMinutes(org.distanceMiles)} min<span className="block text-xs text-ink-3">{org.distanceMiles} mi</span></TD>
+                    <TD className={cn(view === "map" && "hidden")}><div className="flex max-w-[12rem] flex-wrap gap-1">{org.sources.map((s) => <Badge key={s} tone="outline" className="text-[0.7rem]">{s}</Badge>)}</div></TD>
                     <TD className="whitespace-nowrap">
                       {paused ? (
                         <span className="text-xs text-ink-3">Outreach paused</span>
@@ -148,8 +178,7 @@ export default function Finder() {
               </tbody>
             </Table>
           </div>
-        ) : (
-          <TerritoryMap rows={filtered} officeName={office.name} paused={paused} programId={programId} onRoute={addRoute} onBreakdown={viewBreakdown} />
+          </div>
         )}
       </div>
     </div>
@@ -203,82 +232,7 @@ function FilterMenu<T extends string>({ label, all, value, onChange }: { label: 
   );
 }
 
-/** Schematic territory map (E08): organizations by bearing and distance, no map tiles or network needed. */
-function TerritoryMap({ rows, officeName, paused, programId, onRoute, onBreakdown }: { rows: Row[]; officeName: string; paused: boolean; programId: string; onRoute: (id: string) => void; onBreakdown: (id: string) => void }) {
-  const W = 880, H = 600, cx = W / 2, cy = H / 2;
-  const R = (miles: number) => 30 + 50 * Math.sqrt(miles); // compressed scale so nearby partners don't overlap
-  const [sel, setSel] = useState<string | null>(null);
-  const pos = (o: Organization) => {
-    const r = R(o.distanceMiles);
-    const a = ((o.bearing - 90) * Math.PI) / 180;
-    return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
-  };
-  const selected = rows.find((r) => r.org.id === sel);
-  return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
-      <div className="overflow-hidden rounded-lg border border-line bg-surface">
-        <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full" role="img" aria-label={`Territory map around ${officeName}`}>
-          <defs>
-            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="var(--color-line-2)" strokeWidth="1" /></pattern>
-          </defs>
-          <rect width={W} height={H} fill="url(#grid)" />
-          {/* schematic county boundary and highway, synthetic */}
-          <path d={`M${cx - 300} ${cy - 210} L${cx + 260} ${cy - 240} L${cx + 330} ${cy + 180} L${cx - 220} ${cy + 250} Z`} fill="var(--color-teal-tint)" fillOpacity="0.35" stroke="var(--color-teal)" strokeOpacity="0.35" strokeDasharray="6 6" />
-          <path d={`M0 ${cy + 40} C ${cx - 200} ${cy + 10}, ${cx + 120} ${cy - 60}, ${W} ${cy - 90}`} fill="none" stroke="var(--color-line)" strokeWidth="6" />
-          <text x={W - 80} y={cy - 100} fontSize="12" fill="var(--color-ink-3)">I-85</text>
-          {[10, 25].map((m) => (
-            <g key={m}>
-              <circle cx={cx} cy={cy} r={R(m)} fill="none" stroke="var(--color-ink-3)" strokeOpacity="0.5" strokeDasharray="4 6" />
-              <text x={cx + 6} y={cy - R(m) - 6} fontSize="12" fill="var(--color-ink-3)">{m} miles</text>
-            </g>
-          ))}
-          {rows.map(({ org, fit }) => {
-            const p = pos(org);
-            const r = 6 + (fit.score / 99) * 10;
-            const on = sel === org.id;
-            return (
-              <g key={org.id} transform={`translate(${p.x} ${p.y})`} tabIndex={0} role="button" aria-label={`${org.name}, fit ${fit.score}, ${org.stage}`} className="cursor-pointer focus:outline-none"
-                onClick={() => setSel(org.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setSel(org.id); }}>
-                <circle r={r + (on ? 6 : 0)} fill={STAGE_FILL[org.stage]} fillOpacity={on ? 0.25 : 0} />
-                <circle r={r} fill={STAGE_FILL[org.stage]} fillOpacity="0.9" stroke="white" strokeWidth="2" />
-                {on || fit.score >= 72 ? <text y={r + 13} textAnchor="middle" fontSize="11" fontWeight={on ? 600 : 400} fill="var(--color-ink)" stroke="white" strokeWidth="3" paintOrder="stroke" className="pointer-events-none">{org.name.split(",")[0].slice(0, 28)}</text> : null}
-              </g>
-            );
-          })}
-          <g transform={`translate(${cx} ${cy})`}>
-            <rect x="-9" y="-9" width="18" height="18" rx="3" fill="var(--color-ink)" />
-            <text y="26" textAnchor="middle" fontSize="12" fontWeight="600" fill="var(--color-ink)">Clarvida {officeName.split(",")[0]}</text>
-          </g>
-        </svg>
-        <div className="flex flex-wrap items-center gap-3 border-t border-line-2 px-4 py-2.5 text-xs text-ink-2">
-          {STAGES.map((s) => <span key={s} className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded-full" style={{ background: STAGE_FILL[s] }} /> {s}</span>)}
-          <span className="ml-auto">Larger pin = higher fit. Distance scale is compressed near the office. Organizations only; client addresses never appear on any map.</span>
-        </div>
-      </div>
-      <aside className="rounded-lg border border-line bg-surface p-4">
-        {selected ? (
-          <div>
-            <p className="font-medium">{selected.org.name}</p>
-            <p className="text-xs text-ink-3">{selected.org.type}, {selected.org.distanceMiles} miles</p>
-            <div className="mt-3 flex items-center gap-2"><ScoreBadge fit={selected.fit} onOpen={() => onBreakdown(selected.org.id)} /><StageChip stage={selected.org.stage} /></div>
-            <ul className="mt-3 list-disc space-y-1 pl-4 text-sm text-ink-2">{selected.fit.reasons.map((r) => <li key={r}>{r}</li>)}</ul>
-            <div className="mt-4 flex flex-col gap-2">
-              {!paused ? <Link href={href("/app/organization", { id: selected.org.id, tab: "outreach", program: programId })} className="inline-flex h-9 items-center justify-center rounded-md bg-teal px-3 text-sm font-medium text-white hover:bg-teal-strong">Brief and draft</Link> : null}
-              <Button variant="secondary" size="sm" onClick={() => onRoute(selected.org.id)}><Route size={14} /> Add to this week's route</Button>
-            </div>
-          </div>
-        ) : (
-          <div className="text-sm text-ink-2">
-            <p className="font-medium text-ink">Select a pin</p>
-            <p className="mt-1">Red and amber pins are relationships at risk or gone quiet. Start with the ones closest to the office.</p>
-            <ul className="mt-3 space-y-1.5">
-              {rows.filter((r) => r.org.stage === "At risk" || r.org.stage === "Quiet").slice(0, 4).map((r) => (
-                <li key={r.org.id}><button onClick={() => setSel(r.org.id)} className="text-left text-teal hover:underline">{r.org.name}</button></li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </aside>
-    </div>
-  );
-}
+/** Program each organization type mostly refers to (used only for "Hide paused programs"). */
+const ORG_PROGRAMS: Partial<Record<OrgType, string[]>> = {
+  Pediatrics: ["ABA"],
+};

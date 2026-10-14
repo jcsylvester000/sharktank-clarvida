@@ -37,11 +37,11 @@ export default function CapacityBoard() {
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Open" value={programs.filter((p) => p.capacity === "Open").length} tone="ok" />
         <Stat label="Limited" value={programs.filter((p) => p.capacity === "Limited").length} tone="warn" />
-        <Stat label="Waitlist or closed" value={programs.filter(isPaused).length} tone="crit" sub="Outreach paused" />
+        <Stat label="Waitlist or closed" value={programs.filter(isPaused).length} tone="warn" sub="Outreach paused" />
         <Stat label="Not updated in 7 days" value={stale.length} sub="Owner reminded" tone={stale.length ? "warn" : undefined} />
       </div>
       {lastChange ? (
-        <Callout tone={lastChange.paused ? "crit" : "ok"} className="mb-4" icon={<CirclePause size={18} className={lastChange.paused ? "text-crit" : "text-ok"} />}
+        <Callout tone={lastChange.paused ? "warn" : "teal"} className="mb-4" icon={<CirclePause size={18} className={lastChange.paused ? "text-crit" : "text-ok"} />}
           title={lastChange.paused ? `Outreach paused for ${lastChange.program}` : `${lastChange.program} is ${lastChange.capacity}`}>
           {lastChange.paused ? "Recommendations, drafts and sends for this program are turned off. Ambassadors were notified. New referrals still arrive and go to On hold with an honest status." : "Ambassadors can recommend and draft outreach for this program again."}
         </Callout>
@@ -64,7 +64,7 @@ export default function CapacityBoard() {
                 <TD>{p.office}, {p.state}</TD>
                 <TD>
                   <CapacityChip capacity={p.capacity} stale={now - p.capacityUpdatedAt > 7 * D} />
-                  {isPaused(p) ? <span className="mt-1 block text-xs font-medium text-crit">Outreach paused</span> : null}
+                  {isPaused(p) ? <span className="mt-1 block text-xs font-semibold text-warn">Outreach paused</span> : null}
                 </TD>
                 <TD className="max-w-[16rem] text-ink-2">{p.capacityNote || "—"}</TD>
                 <TD>{p.expectedReopen || "—"}</TD>
@@ -104,7 +104,7 @@ function EditDialog({ program, onClose, onSave }: { program: Program | null; onC
         <div>
           <p className="mb-1.5 text-sm font-medium">Status</p>
           <Segmented label="Capacity status" value={cap} onChange={setCap} options={(["Open", "Limited", "Waitlist", "Closed"] as const).map((v) => ({ value: v, label: v }))} />
-          {cap === "Waitlist" || cap === "Closed" ? <p className="mt-2 text-sm text-crit">Outreach for this program will pause and ambassadors will be notified.</p> : null}
+          {cap === "Waitlist" || cap === "Closed" ? <p className="mt-2 text-sm font-medium text-warn">Outreach for this program will pause and ambassadors will be notified.</p> : null}
         </div>
         <div><Label htmlFor="cap-note">Note (optional)</Label><Input id="cap-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Waitlist about 6 weeks" className="mt-1" /></div>
         <div><Label htmlFor="cap-reopen">Expected reopen (optional)</Label><Input id="cap-reopen" value={reopen} onChange={(e) => setReopen(e.target.value)} placeholder="e.g. Jan 2027" className="mt-1" /></div>

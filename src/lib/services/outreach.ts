@@ -2,7 +2,7 @@
 import type { Draft } from "immer";
 import type { AIFeature, AILogEntry, Capacity, Contact, DB, OutreachDraft, PartnerKit, TouchType } from "@/lib/domain/types";
 import { uid } from "@/lib/store/db";
-import { audit, currentUser, notify } from "./core";
+import { activity, audit, currentUser, notify } from "./core";
 import { MODEL_ID } from "@/lib/ai/gateway";
 import { fitScore } from "@/lib/rules/fitScore";
 import { now as clockNow } from "@/lib/clock";
@@ -39,6 +39,7 @@ export function logTouch(d: Draft<DB>, t: { orgId: string; type: TouchType; note
     if (org.stage === "New") org.stage = "Engaged";
   }
   audit(d, { action: `Logged ${t.type.toLowerCase()}`, objectId: t.orgId, zone: "Outreach" });
+  if (u && org) activity(d, `${u.firstName ?? u.name} logged a ${t.type.toLowerCase()} with ${org.name.split(",")[0]}`, { link: `/app/organization/?id=${t.orgId}`, states: [org.state] });
 }
 
 /** Weekly plan refresh (AU11): adds missing candidate actions from the rules; never duplicates an open task. */
@@ -87,6 +88,14 @@ export function approveDraft(d: Draft<DB>, x: Omit<OutreachDraft, "id" | "approv
   // Complete matching open task for this org, if any.
   const t = d.tasks.find((tk) => tk.orgId === x.orgId && tk.ownerId === u.id && !tk.done && (tk.reason === "quiet" || tk.reason === "event" || tk.reason === "new_high_fit"));
   if (t) { t.done = true; t.doneAt = clockNow(); }
+  // HO-07: the approved email shows in the Demo Inbox, labelled as queued in the approved CRM (simulated).
+  const contact = org?.contacts.find((c) => c.id === x.contactId);
+  d.outbox.unshift({
+    id: uid("mail"), at: clockNow(), type: "outreach", fromUserId: u.id, from: `${u.name} <${u.email ?? "ambassador@clarvida.example"}>`,
+    to: contact?.workEmail ?? "partner@partner.example", toName: contact ? `${contact.name}, ${org?.name ?? ""}` : org?.name, subject: x.subject, body: x.finalText,
+    sentVia: "Queued in approved CRM (simulated)", relatedId: x.orgId, link: `/app/organization/?id=${x.orgId}`, linkLabel: "Open the organization", readBy: [],
+  });
+  activity(d, `${u.firstName ?? u.name} approved an outreach email to ${org?.name.split(",")[0] ?? "a partner"}`, { link: `/app/organization/?id=${x.orgId}`, states: org ? [org.state] : undefined });
 }
 
 export function addContact(d: Draft<DB>, orgId: string, c: Omit<Contact, "id">) {
@@ -127,11 +136,12 @@ export function setCapacity(d: Draft<DB>, programId: string, capacity: Capacity,
   const pausedNow = capacity === "Waitlist" || capacity === "Closed";
   const pausedBefore = before === "Waitlist" || before === "Closed";
   if (pausedNow !== pausedBefore) {
-    notify(d, {
-      toRole: "ambassador",
-      text: pausedNow ? `Outreach paused: ${p.partnerLabel} (${p.office}) is ${capacity}` : `Outreach resumed: ${p.partnerLabel} (${p.office}) is ${capacity}`,
-      link: "/app/capacity/",
-    });
+    // HO-05: every ambassador in the program's state hears about it.
+    for (const a of d.users.filter((x) => x.role === "ambassador" && x.active && x.scope.includes(p.state))) {
+      notify(d, { toUserId: a.id, type: "capacity", text: pausedNow ? `Outreach paused: ${p.name} (${p.office}) is on ${capacity.toLowerCase()}${reopen ? `, reopens ${reopen}` : ""}` : `Outreach resumed: ${p.name} (${p.office}) is ${capacity}`, link: "/app/capacity/" });
+    }
+    for (const j of d.nurture.filter((x) => x.programId === programId && (x.status === "Active" || x.status === "Paused"))) j.status = pausedNow ? "Paused" : "Active";
+    if (u) activity(d, `${u.firstName ?? u.name} set ${p.name} (${p.office}) to ${capacity}${pausedNow ? ": outreach paused" : ""}`, { zone: "Both", link: "/app/capacity/", states: [p.state] });
   }
   audit(d, { action: `Capacity changed from ${before} to ${capacity}`, objectId: programId, zone: "Both" });
 }
@@ -159,5 +169,37 @@ export function createKit(d: Draft<DB>, k: { orgId: string; programIds: string[]
   const kit: PartnerKit = { id: uid("kit"), code, orgId: k.orgId, state: org.state, programIds: k.programIds, language: k.language, scans: 0, referrals: 0, createdBy: u?.id ?? "", createdAt: clockNow() };
   d.kits.push(kit);
   audit(d, { action: "Generated partner kit", objectId: code, zone: "Outreach" });
+  if (u) activity(d, `${u.firstName ?? u.name} created a partner kit for ${org.name.split(",")[0]}`, { link: "/app/kits/", states: [org.state] });
   return code;
+}
+
+// ---------------------------------------------------------------- B3: visits, routes (FT-175, FT-176)
+export const CHECKIN_RADIUS_MI = 0.25;
+
+/** Visit check-in. Location is read once, at this moment, only if the person allowed it; it is never stored as a trail. */
+export function checkIn(d: Draft<DB>, x: { orgId: string; method: "location" | "address" | "demo"; distanceMi: number | null; outcome: string }) {
+  const u = currentUser(d);
+  const org = d.orgs.find((o) => o.id === x.orgId);
+  if (!u || !org) return;
+  d.visits.unshift({ id: uid("vi"), orgId: x.orgId, userId: u.id, at: clockNow(), method: x.method, distanceMi: x.distanceMi, outcome: x.outcome });
+  d.touches.unshift({ id: uid("tc"), orgId: x.orgId, byUserId: u.id, type: "Visit", note: x.outcome || "Visit (checked in)", at: clockNow() });
+  org.lastTouchAt = clockNow();
+  if (org.stage === "New") org.stage = "Engaged";
+  const how = x.method === "address" ? "at the organization's address" : x.distanceMi !== null ? `location confirmed, ${x.distanceMi.toFixed(2)} mi from site` : "demo location";
+  audit(d, { action: `Visit check-in (${how})`, objectId: x.orgId, zone: "Outreach" });
+  activity(d, `${u.firstName ?? u.name} checked in at ${org.name.split(",")[0]}`, { link: `/app/organization/?id=${x.orgId}`, states: [org.state] });
+  // Close a matching open visit task, create a follow-up.
+  const t = d.tasks.find((tk) => tk.orgId === x.orgId && tk.ownerId === u.id && !tk.done && tk.reason === "visit");
+  if (t) { t.done = true; t.doneAt = clockNow(); }
+  d.tasks.push({ id: uid("t"), ownerId: u.id, orgId: x.orgId, text: `Follow up with ${org.name.split(",")[0]} after your visit`, reason: "manual", minutes: 5, dueAt: clockNow() + 2 * 86_400_000, done: false, source: "manual" });
+}
+
+export function saveRoute(d: Draft<DB>, orgIds: string[], minutes: number) {
+  const u = currentUser(d);
+  if (!u) return;
+  const acc = d.accounts[u.id];
+  if (acc) acc.filters.route = { orgIds, minutes, savedAt: clockNow() };
+  d.tasks = d.tasks.filter((t) => !(t.ownerId === u.id && t.source === "route" && !t.done && t.text.startsWith("Field day")));
+  d.tasks.push({ id: uid("t"), ownerId: u.id, orgId: orgIds[0] ?? "", text: `Field day: ${orgIds.length} visits, about ${minutes} minutes of driving`, reason: "visit", minutes: orgIds.length * 45, dueAt: clockNow() + 2 * 86_400_000, done: false, source: "route" });
+  audit(d, { action: `Planned field-day route (${orgIds.length} stops)`, zone: "Outreach" });
 }

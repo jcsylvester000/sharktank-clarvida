@@ -3,6 +3,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { MapPin, Map as MapIcon, NotebookPen, Car } from "lucide-react";
 import { ArrowLeft, Bot, CheckCircle2, CircleAlert, CircleCheck, CirclePause, FlaskConical, Mail, Plus, RotateCcw, Sparkles, TriangleAlert, UserRoundCog } from "lucide-react";
 import { useStore } from "@/lib/store/db";
 import { useCurrentUser, useNow } from "@/lib/store/hooks";
@@ -12,7 +13,11 @@ import { canApprove, isPaused, sendChecks } from "@/lib/rules/outreach";
 import { suppress } from "@/lib/rules/suppress";
 import { generateBrief, generateEmail, guardInputs, TEMPLATES, MODEL_ID } from "@/lib/ai/gateway";
 import { useStream } from "@/lib/ai/use-stream";
-import { addContact, approveDraft, logAI, reassignOrg, recordBlocked, setOptOut } from "@/lib/services/outreach";
+import { addContact, approveDraft, logAI, logTouch, reassignOrg, recordBlocked, setOptOut } from "@/lib/services/outreach";
+import { phiScan } from "@/lib/rules/phi";
+import { driveMinutes } from "@/lib/geo";
+import { CheckInDialog } from "@/components/map/check-in-dialog";
+import { uid } from "@/lib/store/db";
 import { PHI_TEST_STRINGS } from "@/lib/data/seed";
 import { fmtDate, ago, daysSince } from "@/lib/format";
 import type { Organization } from "@/lib/domain/types";
@@ -37,6 +42,8 @@ function OrgPage() {
   const now = useNow(60_000);
   const org = db.orgs.find((o) => o.id === id);
   const [tab, setTab] = useState(params.get("tab") ?? "brief");
+  const [checkIn, setCheckIn] = useState(false);
+  const [logOpen, setLogOpen] = useState(false);
   useEffect(() => { setTab(params.get("tab") ?? "brief"); }, [params]);
 
   if (!org) return <Empty title="Organization not found"><Link href={href("/app/finder")} className="text-teal hover:underline">Back to the Gatekeeper Finder</Link></Empty>;
@@ -45,6 +52,7 @@ function OrgPage() {
   const fit = fitScore(org, { family: "child", weights: db.gatekeeperWeights, programs: db.programs, now });
   const owner = db.users.find((u) => u.id === org.ownerId);
   const isLead = me.role === "amb_lead" || me.role === "admin";
+  const canWork = accessForUser(pageById("PG-09"), me) === "full";
   return (
     <div>
       <Link href={href("/app/finder")} className="mb-3 inline-flex items-center gap-1.5 text-sm text-ink-2 hover:text-ink"><ArrowLeft size={15} /> Gatekeeper Finder</Link>
@@ -56,7 +64,15 @@ function OrgPage() {
             <Badge tone="teal">Outreach Zone: organization data only</Badge>
           </div>
           <h1 className="mt-2 text-[1.75rem] leading-tight">{org.name}</h1>
-          <p className="mt-1 text-sm text-ink-2">{org.county} County, {org.state}, {org.distanceMiles} miles from the office. Owner: {owner?.name ?? "—"}. Sources: {org.sources.join(", ")} ({org.identifiers}).</p>
+          <p className="mt-1 text-sm text-ink-2">{org.county} County, {org.state}. Owner: {owner?.name ?? "—"}. Sources: {org.sources.join(", ")} ({org.identifiers}).</p>
+          <p className="mt-1 inline-flex items-center gap-1.5 text-sm font-medium text-teal-strong"><Car size={15} /> {driveMinutes(org.distanceMiles)}-minute drive from the office ({org.distanceMiles} miles)</p>
+          {canWork ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button size="sm" variant="secondary" onClick={() => setLogOpen(true)}><NotebookPen size={14} /> Log a visit or call</Button>
+              <Button size="sm" variant="secondary" onClick={() => setCheckIn(true)}><MapPin size={14} /> Check in here</Button>
+              <Link href={`/app/map/?org=${org.id}`} className="inline-flex"><Button size="sm" variant="ghost"><MapIcon size={14} /> See on the map</Button></Link>
+            </div>
+          ) : null}
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right">
@@ -83,6 +99,8 @@ function OrgPage() {
         <TabPanel value="contacts"><ContactsTab org={org} /></TabPanel>
         <TabPanel value="history"><HistoryTab org={org} /></TabPanel>
       </Tabs>
+      {checkIn ? <CheckInDialog orgId={org.id} onClose={() => setCheckIn(false)} /> : null}
+      <LogTouchDialog open={logOpen} onOpenChange={setLogOpen} org={org} />
     </div>
   );
 }
@@ -279,7 +297,7 @@ function OutreachTab({ org }: { org: Organization }) {
           </div>
 
           {paused && program ? (
-            <Callout tone="crit" icon={<CirclePause size={18} className="text-crit" />} title={`Program on ${program.capacity}: outreach paused`}>
+            <Callout tone="neutral" className="border-cv-amber bg-hl-tint" icon={<CirclePause size={18} className="text-warn" />} title={`Program on ${program.capacity}: outreach paused`}>
               {program.name} is not taking new referrals{program.expectedReopen ? ` (expected to reopen ${program.expectedReopen})` : ""}. Choose another program, or wait until it reopens.
             </Callout>
           ) : null}
@@ -309,16 +327,16 @@ function OutreachTab({ org }: { org: Organization }) {
               </div>
               <div>
                 <Label htmlFor="o-body">Message</Label>
-                <Textarea id="o-body" value={bodyValue} onChange={(e) => setBody(e.target.value)} readOnly={streaming} className={cn("mt-1 min-h-[22rem] font-sans text-[0.9rem]", phiFail && "border-crit")} />
+                <Textarea id="o-body" value={bodyValue} onChange={(e) => setBody(e.target.value)} readOnly={streaming} className={cn("mt-1 min-h-[22rem] rounded-2xl bg-cv-ice font-sans text-[0.9rem]", phiFail && "border-crit")} />
               </div>
               {blockNotice ? (
                 <Callout tone="crit" icon={<TriangleAlert size={18} className="text-crit" />} title={`Blocked: possible client details (${blockNotice})`}>
                   Outreach and AI use organization data only. Remove the client details to continue. Compliance has been notified; the text itself was not stored.
                 </Callout>
               ) : null}
-              {presenter && !streaming ? (
-                <Button size="sm" variant="ghost" onClick={() => setBody((b) => b.replace("Would a 15-minute", `Re ${PHI_TEST_STRINGS[0]}, ${PHI_TEST_STRINGS[1]}. Would a 15-minute`))}>
-                  <FlaskConical size={14} /> Paste a test example (presenter)
+              {canEdit && !streaming ? (
+                <Button size="sm" variant="link" onClick={() => setBody((b) => `Avery, age 9, Medicaid ID 9001234567, needs help after school.\n\n${b}`)} data-guide="paste-phi">
+                  <FlaskConical size={14} /> Try pasting client details (demo)
                 </Button>
               ) : null}
             </div>
@@ -342,8 +360,8 @@ function OutreachTab({ org }: { org: Organization }) {
               ))}
             </ul>
             <div className="mt-4 flex flex-col gap-2">
-              <Button onClick={approve} disabled={!draft || streaming || !canApprove(checks) || !canEdit} className="justify-center">
-                <CheckCircle2 size={16} /> Approve and queue
+              <Button variant="cta" onClick={approve} disabled={!draft || streaming || !canApprove(checks) || !canEdit} className="justify-center" data-guide="approve">
+                Approve and queue
               </Button>
               {draft ? <Button variant="ghost" onClick={() => { setDraft(null); setStreamText(null); setBody(""); }}>Discard draft</Button> : null}
             </div>
@@ -417,7 +435,9 @@ function ContactsTab({ org }: { org: Organization }) {
 function HistoryTab({ org }: { org: Organization }) {
   const db = useStore((s) => s.db);
   const items = [
-    ...db.touches.filter((t) => t.orgId === org.id).map((t) => ({ at: t.at, title: t.type, text: t.note, by: db.users.find((u) => u.id === t.byUserId)?.name ?? "—" })),
+    ...db.touches.filter((t) => t.orgId === org.id && !db.visits.some((v) => v.orgId === org.id && Math.abs(v.at - t.at) < 2000)).map((t) => ({ at: t.at, title: t.type, text: t.note, by: db.users.find((u) => u.id === t.byUserId)?.name ?? "—" })),
+    ...db.visits.filter((v) => v.orgId === org.id).map((v) => ({ at: v.at, title: v.method === "location" ? "Visit (location confirmed)" : v.method === "demo" ? "Visit (demo location)" : "Visit (checked in at address)", text: `${v.outcome}${v.distanceMi !== null ? ` · ${v.distanceMi.toFixed(2)} mi from site` : ""}`, by: db.users.find((u) => u.id === v.userId)?.name ?? "—" })),
+    ...db.drafts.filter((x) => x.orgId === org.id).map((x) => ({ at: x.approvedAt + 1, title: "Outreach approved", text: `"${x.subject}" approved by ${db.users.find((u) => u.id === x.approvedBy)?.name ?? "—"}, queued in the approved CRM`, by: db.users.find((u) => u.id === x.approvedBy)?.name ?? "—" })),
     ...db.audit.filter((a) => a.objectId === org.id && /Reassigned|Opted out|Added contact/.test(a.action)).map((a) => ({ at: a.at, title: a.action, text: "", by: a.actorName })),
   ].sort((a, b) => b.at - a.at);
   return (
@@ -469,3 +489,38 @@ export default function Page() {
   );
 }
 
+
+/** FT-061: log a visit or call with outcome and next step; updates the timeline and creates a follow-up task. */
+function LogTouchDialog({ open, onOpenChange, org }: { open: boolean; onOpenChange: (o: boolean) => void; org: Organization }) {
+  const mutate = useStore((s) => s.mutate);
+  const me = useCurrentUser()!;
+  const [type, setType] = useState<"Call" | "Visit" | "Email">("Call");
+  const [note, setNote] = useState("");
+  const [next, setNext] = useState("");
+  const [due, setDue] = useState(() => new Date(Date.now() + 2 * 86_400_000).toISOString().slice(0, 10));
+  const [err, setErr] = useState<string | null>(null);
+  return (
+    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) setErr(null); }} title={`Log a visit or call: ${org.name.split(",")[0]}`} description="Notes are about the organization, never about clients."
+      footer={<><Button variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button><Button variant="cta" disabled={!note.trim()} onClick={() => {
+        const phi = phiScan(`${note} ${next}`);
+        if (phi.blocked) { mutate((d) => recordBlocked(d, { objectId: org.id, category: phi.category!, where: "a visit note" })); setErr(`Blocked: possible client details (${phi.category}). This was logged for Compliance.`); return; }
+        mutate((d) => {
+          logTouch(d, { orgId: org.id, type, note: note.trim() });
+          if (next.trim()) d.tasks.push({ id: uid("t"), ownerId: me.id, orgId: org.id, text: next.trim(), reason: "manual", minutes: 10, dueAt: new Date(due + "T12:00:00").getTime(), done: false, source: "manual" });
+          for (const j of d.nurture.filter((x) => x.orgId === org.id && x.status === "Warm: call now")) { j.status = "Completed"; }
+        });
+        toast.success(`${type} logged`, { description: next.trim() ? "A follow-up task is on your dashboard." : undefined });
+        setNote(""); setNext(""); onOpenChange(false);
+      }}>Save</Button></>}>
+      <div className="space-y-4">
+        <div className="flex gap-2">{(["Call", "Visit", "Email"] as const).map((t) => <button key={t} type="button" onClick={() => setType(t)} className={cn("rounded-full border px-3 py-1 text-sm font-semibold", type === t ? "border-teal bg-teal text-white" : "border-line text-ink-2")}>{t}</button>)}</div>
+        <div><Label htmlFor="lt-note">What happened</Label><Textarea id="lt-note" value={note} onChange={(e) => { setNote(e.target.value); setErr(null); }} placeholder="e.g. Spoke with T. Alvarez; send the program list" className="mt-1" /></div>
+        <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+          <div><Label htmlFor="lt-next">Next step (creates a task)</Label><Input id="lt-next" value={next} onChange={(e) => setNext(e.target.value)} placeholder="e.g. Send the updated program list" className="mt-1" /></div>
+          <div><Label htmlFor="lt-due">Due</Label><Input id="lt-due" type="date" value={due} onChange={(e) => setDue(e.target.value)} className="mt-1" /></div>
+        </div>
+        {err ? <p className="rounded-xl bg-crit-tint px-3 py-2 text-sm text-crit" role="alert">{err}</p> : null}
+      </div>
+    </Dialog>
+  );
+}

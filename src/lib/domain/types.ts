@@ -543,6 +543,58 @@ export interface DB {
   resetTokens: ResetToken[];
   outbox: OutboxMessage[];
   activity: ActivityItem[];
+  visits: Visit[];
+  nurture: NurtureEnrollment[];
+  ideas: ContentIdea[];
+}
+
+// ---------------------------------------------------------------- v3 outreach additions (B3)
+/** FT-175: a location-confirmed (or address) visit check-in. One reading at check-in time; never a location history. */
+export interface Visit {
+  id: string;
+  orgId: string;
+  userId: string;
+  at: number;
+  method: "location" | "address" | "demo";
+  distanceMi: number | null; // distance from the organization at check-in, when location was shared
+  outcome: string;
+}
+
+export type NurtureStepKind = "Intro email" | "Resource" | "Webinar invite" | "Check-in";
+export interface NurtureStep {
+  kind: NurtureStepKind;
+  day: number; // days after enrollment
+  subject: string;
+  status: "Scheduled" | "Waiting for approval" | "Sent" | "Skipped";
+  sentAt?: number;
+  approvedBy?: string;
+}
+/** FT-062, FT-063: nurture journey enrollment with engagement signals and a warm score. */
+export interface NurtureEnrollment {
+  id: string;
+  orgId: string;
+  ownerId: string;
+  template: "Clinic intro" | "School intro" | "Agency re-engage";
+  programId: string;
+  enrolledAt: number;
+  steps: NurtureStep[];
+  signals: { kind: "Opened" | "Clicked" | "Downloaded" | "Registered" | "Replied"; at: number; step: NurtureStepKind }[];
+  warmScore: number;
+  status: "Active" | "Warm: call now" | "Completed" | "Paused";
+  firstApproved: boolean;
+  handedOffAt?: number;
+}
+
+/** FT-064: content and webinar idea that marketing approves into a calendar. */
+export interface ContentIdea {
+  id: string;
+  audience: "Schools" | "Clinics" | "Faith and community" | "Child welfare";
+  title: string;
+  whyNow: string;
+  format: "Webinar" | "One-pager" | "Email" | "Event";
+  status: "Suggested" | "Approved";
+  scheduledFor?: string;
+  approvedBy?: string;
 }
 
 // ---------------------------------------------------------------- Live sandbox (simulation)

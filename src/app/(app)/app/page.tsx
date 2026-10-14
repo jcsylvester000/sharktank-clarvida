@@ -19,8 +19,8 @@ import { cn } from "@/components/ui/cn";
 import type { Role, User } from "@/lib/domain/types";
 
 const QUICK: Record<Role, { label: string; to: string }[]> = {
-  ambassador: [{ label: "Find gatekeepers", to: "/app/finder" }, { label: "Partner kits and QR", to: "/app/kits" }, { label: "Partner Directory", to: "/app/directory" }],
-  amb_lead: [{ label: "Partner Directory", to: "/app/directory" }, { label: "Relationship Events", to: "/app/events" }, { label: "Impact Dashboard", to: "/app/impact" }],
+  ambassador: [{ label: "Find gatekeepers", to: "/app/finder" }, { label: "Map Explorer", to: "/app/map" }, { label: "Nurture Journeys", to: "/app/nurture" }, { label: "Partner kits and QR", to: "/app/kits" }],
+  amb_lead: [{ label: "Map Explorer: coverage", to: "/app/map" }, { label: "Partner Directory", to: "/app/directory" }, { label: "Relationship Events", to: "/app/events" }],
   intake: [{ label: "Open the Intake Queue", to: "/app/intake" }, { label: "Enter a phone or fax referral", to: "/app/referral/new" }, { label: "Capacity Board", to: "/app/capacity" }],
   intake_sup: [{ label: "Open the Intake Queue", to: "/app/intake" }, { label: "Response times", to: "/app/impact" }, { label: "Capacity Board", to: "/app/capacity" }],
   program_mgr: [{ label: "Update capacity", to: "/app/capacity" }, { label: "Program Catalog", to: "/app/catalog" }],

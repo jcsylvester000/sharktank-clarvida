@@ -6,6 +6,7 @@ import { isPaused, sourceHealth, weeklyPlan } from "@/lib/rules/outreach";
 import { suppress } from "@/lib/rules/suppress";
 import { funnel, speed } from "@/lib/services/analytics";
 import { notificationsFor } from "@/lib/services/core";
+import { OFFICES, coverageGaps } from "@/lib/geo";
 
 const H = 3_600_000;
 const D = 24 * H;
@@ -174,6 +175,19 @@ export function alertsFor(db: DB, me: User, now: number): Alert[] {
       }
     }
   }
+  if (role === "ambassador") {
+    for (const j of db.nurture.filter((x) => x.ownerId === me.id && x.status === "Warm: call now")) {
+      const o = db.orgs.find((x) => x.id === j.orgId);
+      out.unshift({ id: `al-w-${j.id}`, tone: "approval", title: `Warm: call ${o?.name.split(",")[0]} now`, detail: `Warm score ${j.warmScore}. Talking points are ready.`, link: "/app/nurture/" });
+    }
+  }
+  if (role === "amb_lead") {
+    for (const office of OFFICES.filter((o) => o.id !== "off-denver")) {
+      for (const g of coverageGaps(db.orgs, office, 10).slice(0, 2)) {
+        out.push({ id: `al-g-${office.id}-${g.type}`, tone: "info", title: `Coverage gap: no ${g.type.toLowerCase()} engaged within 10 miles of ${office.short}`, detail: g.nearest ? `Start with ${g.nearest.name}.` : "No candidates in range yet.", link: "/app/map/?layer=gaps&tab=layers" });
+      }
+    }
+  }
   if (role !== "judge" && role !== "partner") {
     for (const p of db.programs.filter(isPaused)) {
       out.push({ id: `al-p-${p.id}`, tone: "paused", title: `${p.name} (${p.office}) is on ${p.capacity.toLowerCase()}`, detail: `Outreach for it is paused everywhere${p.expectedReopen ? `; expected to reopen ${p.expectedReopen}` : ""}.`, link: "/app/capacity/" });
@@ -198,7 +212,7 @@ export function alertsFor(db: DB, me: User, now: number): Alert[] {
       out.push({ id: `al-s-${p.id}`, tone: "info", title: `${p.name}: capacity not confirmed in ${Math.floor((now - p.capacityUpdatedAt) / D)} days`, detail: "Confirm it so ambassadors and intake trust the board.", link: "/app/capacity/" });
     }
   }
-  return out.slice(0, 6);
+  return out.slice(0, 8);
 }
 
 /** FT-042: tasks for roles without an outreach plan, derived from live data. Completing one is remembered per account. */
@@ -222,7 +236,7 @@ export function roleTasks(db: DB, me: User, acc: AccountState, now: number): Das
     case "marketing":
       add({ id: "tk-mk-baselines", kind: "task", text: "Add the 3 Clarvida baselines to the pilot scorecard", why: "Referrals per month, share reaching intake, time to first contact", link: "/app/pilot/", due: now + 1 * D });
       add({ id: "tk-mk-report", kind: "task", text: "Share last month's attribution report with leadership", why: "Which relationships produce clients", link: "/app/impact/", due: now + 3 * D });
-      add({ id: "tk-mk-ideas", kind: "task", text: "Review webinar ideas for school counselors", why: "2 ideas waiting for approval", link: "/app/events/", due: now + 4 * D });
+      add({ id: "tk-mk-ideas", kind: "task", text: "Review webinar ideas for school counselors", why: "Ideas waiting for approval", link: "/app/content/", due: now + 4 * D });
       break;
     case "compliance":
       db.audit.filter((a) => a.category === "blocked").slice(0, 2).forEach((a) => add({ id: `tk-bl-${a.id}`, kind: "derived", text: `Review blocked attempt by ${a.actorName}`, why: "PHI guard stopped client details", link: "/app/audit/" }));

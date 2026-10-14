@@ -2,9 +2,10 @@
 // Organization names are illustrative public institutions. Times are relative to "now" so the demo stays current.
 // Ported from the Sharktank prototype (assets/js/data.js) and extended for the Next.js build.
 import type { DB, Organization, Program, Referral, User, ContactAttempt, StatusEvent, ReferrerNotice } from "@/lib/domain/types";
+import { seedIdeas, seedNurture, seedVisits } from "@/lib/data/outreach";
 import { ACCOUNTS, seedAccounts, seedActivity, seedOutbox, seedPersonalNotifications } from "@/lib/data/accounts";
 
-export const SCHEMA_VERSION = 4; // v3 build (accounts, inbox, activity). Bump to force a clean re-seed (NF-07).
+export const SCHEMA_VERSION = 5; // v3 build (accounts, inbox, activity). Bump to force a clean re-seed (NF-07).
 export const FIRST_REF_SEQ = 24818; // first live referral is REF-NC-24818 (JR-05.02)
 
 const H = 3_600_000;
@@ -249,6 +250,9 @@ export function makeSeed(now: number = Date.now()): DB {
     resetTokens: [],
     outbox: seedOutbox(now),
     activity: seedActivity(now),
+    visits: seedVisits(now),
+    nurture: seedNurture(now),
+    ideas: seedIdeas(),
   };
 }
 

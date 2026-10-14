@@ -73,7 +73,7 @@ export default function Kits() {
               <div className="mt-1.5 space-y-1.5">
                 {progs.map((p) => (
                   <Checkbox key={p.id} checked={programIds.includes(p.id)} onChange={(e) => setProgramIds(e.target.checked ? [...programIds, p.id] : programIds.filter((x) => x !== p.id))}
-                    label={<span>{p.partnerLabel}{isPaused(p) ? <span className="text-xs text-crit"> ({p.capacity})</span> : null}</span>} />
+                    label={<span>{p.partnerLabel}{isPaused(p) ? <span className="text-xs text-warn"> ({p.capacity})</span> : null}</span>} />
                 ))}
               </div>
             </fieldset>

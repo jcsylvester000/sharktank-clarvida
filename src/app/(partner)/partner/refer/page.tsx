@@ -284,7 +284,7 @@ function ReferForm() {
                         <li key={p.id} className="flex items-center justify-between gap-3 rounded-md border border-line bg-surface px-3 py-2">
                           <span className="text-sm">
                             <span className="font-medium">{p.partnerLabel}, {p.office}</span>
-                            <span className={cn("ml-2 text-xs", p.capacity === "Open" ? "text-ok" : p.capacity === "Limited" ? "text-warn" : "text-crit")}>
+                            <span className={cn("ml-2 text-xs", p.capacity === "Open" ? "text-teal-strong" : "text-warn")}>
                               {p.capacity === "Open" ? t.accepting : p.capacity === "Limited" ? t.limited : t.waitlisted}
                             </span>
                           </span>

@@ -50,6 +50,10 @@ Emails use the reserved `.example` domain, so nothing can reach a real inbox.
 - **Explain mode:** Demo menu → shows page and feature IDs (hidden by default).
 - Data lives in browser storage (`cv-proto-v3`); each browser has its own copy. Two windows of the same browser stay in sync within a second.
 
+## Maps
+
+Maps use **OpenStreetMap** through Leaflet: street tiles load from `tile.openstreetmap.org` (needs internet; light, interactive use with the required "© OpenStreetMap contributors" attribution). Everything on top of the map is prototype data: organization pins, offices, rings, routes, visits and county demand. Organization positions are illustrative and placed from each organization's stored distance and bearing from its office. Without internet the map shows a notice and the markers still work. Client locations are never mapped.
+
 ## Project layout
 
 | Path | What |
@@ -76,6 +80,7 @@ cd qa && npm install  # first time
 node server.js ../out 4310 &   # serve the build
 node b1-accounts.js            # Batch 1: accounts, sign-in, MFA, welcome, dashboards, lockout, reset, access
 node b2-care.js                # Batch 2: partner form → intake → referral → status, consent, X-ray, redirect, escalation
+node b3-outreach.js            # Batch 3: Map Explorer, finder map, brief/draft/PHI/approve, nurture, content, scope
 ```
 
 ## Build status
@@ -84,6 +89,6 @@ node b2-care.js                # Batch 2: partner form → intake → referral �
 |---|---|---|
 | B1 | Foundation: brand system, 11 accounts, sign-in, SSO chooser, MFA + Demo Authenticator, remembered devices, lockout, password reset, welcome, role dashboards, mock API, notifications, Demo Inbox, settings, partner hub, reset | Done (Oct 14) |
 | B2 | Care loop: branded partner form (specific errors, nearest office, sample fill), reference-only confirmation, signed status links, live handoff, intake queue with next best call, brand response clock, referral detail, warm redirect, escalation + reassign, referrer notices and team activity | Done (Oct 14) |
-| B3 | Outreach and maps | Next |
-| B4 | Insights, governance, opening scene, guided demo, presenter window | |
+| B3 | Outreach and maps: OpenStreetMap Map Explorer (POIs by stage, clustering, 5/10/25-mile rings, drive times, route planner, location check-in, referral heat, coverage gaps, need vs capacity), finder with map, organization (log visit/call, check-in, approvals in Demo Inbox), Nurture Journeys with warm handoff, Content and Webinar Ideas | Done (Oct 14) |
+| B4 | Insights, governance and presentation | Next |
 | B5 | QA against the Acceptance Criteria workbook and freeze | |

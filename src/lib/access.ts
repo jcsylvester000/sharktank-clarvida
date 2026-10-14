@@ -40,8 +40,11 @@ const def = ({ matrix, ...p }: Def): PageDef => ({ ...p, ...m(matrix) });
 export const PAGES: PageDef[] = [
   def({ id: "PG-06", title: "My dashboard", route: "/app", module: "Home", zone: "Both", dataClass: "C0–C2", matrix: "FFFFFFFF.F", brd: "FT-040 to FT-045", icon: "LayoutDashboard" }),
   def({ id: "PG-07", title: "Gatekeeper Finder", route: "/app/finder", module: "Outreach", zone: "Outreach", dataClass: "C0", matrix: "FF...V...V", brd: "FT-050 to FT-052", icon: "Radar" }),
+  def({ id: "PG-35", title: "Map Explorer", route: "/app/map", module: "Outreach", zone: "Outreach", dataClass: "C0, C1 (aggregate)", matrix: "FF.VVF.V.V", brd: "FT-170 to FT-182", icon: "Map" }),
   def({ id: "PG-08", title: "Partner Directory", route: "/app/directory", module: "Outreach", zone: "Outreach", dataClass: "C0–C2", matrix: "FF...V...V", brd: "FT-053, FT-123", icon: "Building2" }),
   def({ id: "PG-09", title: "Organization", route: "/app/organization", module: "Outreach", zone: "Outreach", dataClass: "C0, C2", matrix: "FF...V...V", brd: "FT-054 to FT-061", icon: "Building", inMenu: false }),
+  def({ id: "PG-10", title: "Nurture Journeys", route: "/app/nurture", module: "Outreach", zone: "Outreach", dataClass: "C0, C2", matrix: "FF...F...V", brd: "FT-062, FT-063", icon: "Sprout" }),
+  def({ id: "PG-11", title: "Content and Webinar Ideas", route: "/app/content", module: "Outreach", zone: "Outreach", dataClass: "C0", matrix: "VF...F...V", brd: "FT-064", icon: "Lightbulb" }),
   def({ id: "PG-12", title: "Relationship Events", route: "/app/events", module: "Outreach", zone: "Outreach", dataClass: "C0", matrix: "VF...F.F.V", brd: "FT-065", icon: "Megaphone" }),
   def({ id: "PG-13", title: "Partner Kits and QR", route: "/app/kits", module: "Outreach", zone: "Outreach", dataClass: "C0", matrix: "FF...F...V", brd: "FT-066", icon: "QrCode" }),
   def({ id: "PG-14", title: "Intake Queue", route: "/app/intake", module: "Referrals", zone: "Care", dataClass: "C3, C4", matrix: "..FF..V...", brd: "FT-084 to FT-087", icon: "Inbox" }),

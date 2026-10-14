@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   Bell, BookOpen, Bot, Building2, Building, ChartColumnBig, Gauge, HeartHandshake, Inbox, Lock, Megaphone, Menu, PhoneIncoming, QrCode, Radar, Rocket, ScrollText,
-  Settings, ShieldCheck, LogOut, Presentation, RotateCcw, Check, X, Activity, LayoutDashboard, Mail, UserCog, Users, FileText, Eye, Timer,
+  Settings, ShieldCheck, LogOut, Presentation, RotateCcw, Check, X, Activity, LayoutDashboard, Mail, UserCog, Users, FileText, Eye, Timer, Map as MapIcon, Sprout, Lightbulb,
 } from "lucide-react";
 import { LiveControls } from "@/components/live/live-controls";
 import { isSimUser } from "@/lib/live/seed";
@@ -29,7 +29,7 @@ import { Avatar, Logo, PageSkeleton, SyntheticNotice } from "@/components/brand/
 import type { Role, User } from "@/lib/domain/types";
 
 const ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
-  LayoutDashboard, Radar, Building2, Building, Megaphone, QrCode, Inbox, FileText, PhoneIncoming, Gauge, BookOpen, ChartColumnBig, Rocket, HeartHandshake, ScrollText, Bot, ShieldCheck, Settings, Activity, Bell, Mail, UserCog,
+  LayoutDashboard, Radar, Building2, Building, Megaphone, QrCode, Inbox, FileText, PhoneIncoming, Gauge, BookOpen, ChartColumnBig, Rocket, HeartHandshake, ScrollText, Bot, ShieldCheck, Settings, Activity, Bell, Mail, UserCog, Map: MapIcon, Sprout, Lightbulb,
 };
 
 export function AppShell({ children }: { children: React.ReactNode }) {
