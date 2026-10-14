@@ -117,9 +117,9 @@ export default function NewReferral() {
               </div>
               {!f.orgId ? <div><Label htmlFor="orgName">Organization name (if any)</Label><Input id="orgName" value={f.orgName} onChange={(e) => set("orgName", e.target.value)} className="mt-1" /></div> : <div />}
               <div><Label htmlFor="src">Source type</Label><Select id="src" value={f.srcType} onChange={(e) => set("srcType", e.target.value)} {...err("srcType")} className="mt-1"><option value="">Choose…</option>{SRC_TYPES.map((s) => <option key={s.v}>{s.v}</option>)}</Select><FieldError id="srcType-err">{tried ? errors.srcType : null}</FieldError></div>
-              <div><Label htmlFor="role">Referrer's role</Label><Input id="role" value={f.refRole} onChange={(e) => set("refRole", e.target.value)} {...err("refRole")} placeholder="e.g. School counselor, Parent" className="mt-1" /><FieldError id="refRole-err">{tried ? errors.refRole : null}</FieldError></div>
-              <div><Label htmlFor="rname">Referrer's name (optional)</Label><Input id="rname" value={f.refName} onChange={(e) => set("refName", e.target.value)} className="mt-1" /></div>
-              <div><Label htmlFor="rphone">Referrer's work phone (optional)</Label><Input id="rphone" type="tel" value={f.refPhone} onChange={(e) => set("refPhone", e.target.value)} className="mt-1" /></div>
+              <div><Label htmlFor="role">Referrer&apos;s role</Label><Input id="role" value={f.refRole} onChange={(e) => set("refRole", e.target.value)} {...err("refRole")} placeholder="e.g. School counselor, Parent" className="mt-1" /><FieldError id="refRole-err">{tried ? errors.refRole : null}</FieldError></div>
+              <div><Label htmlFor="rname">Referrer&apos;s name (optional)</Label><Input id="rname" value={f.refName} onChange={(e) => set("refName", e.target.value)} className="mt-1" /></div>
+              <div><Label htmlFor="rphone">Referrer&apos;s work phone (optional)</Label><Input id="rphone" type="tel" value={f.refPhone} onChange={(e) => set("refPhone", e.target.value)} className="mt-1" /></div>
             </PanelBody>
           </Panel>
 
@@ -136,9 +136,9 @@ export default function NewReferral() {
                 </Select>
                 {program && isPaused(program) ? <p className="mt-1 text-sm text-warn">{program.name} is on {program.capacity}. The referral goes to On hold and the referrer is told honestly.</p> : null}
               </div>
-              <div><Label htmlFor="age">Child's age (or adult's age)</Label><Input id="age" inputMode="numeric" value={f.age} onChange={(e) => set("age", e.target.value.replace(/\D/g, "").slice(0, 2))} {...err("age")} className="mt-1" /><FieldError id="age-err">{tried ? errors.age : null}</FieldError></div>
+              <div><Label htmlFor="age">Child&apos;s age (or adult&apos;s age)</Label><Input id="age" inputMode="numeric" value={f.age} onChange={(e) => set("age", e.target.value.replace(/\D/g, "").slice(0, 2))} {...err("age")} className="mt-1" /><FieldError id="age-err">{tried ? errors.age : null}</FieldError></div>
               <div><Label htmlFor="cov">Coverage</Label><Select id="cov" value={f.coverage} onChange={(e) => set("coverage", e.target.value)} className="mt-1"><option value="">Not sure</option>{COVERAGE.map((c) => <option key={c.v}>{c.v}</option>)}</Select></div>
-              <div><Label htmlFor="guardian">Guardian's first name</Label><Input id="guardian" autoComplete="off" value={f.guardian} onChange={(e) => set("guardian", e.target.value)} {...err("guardian")} className="mt-1" /><FieldError id="guardian-err">{tried ? errors.guardian : null}</FieldError></div>
+              <div><Label htmlFor="guardian">Guardian&apos;s first name</Label><Input id="guardian" autoComplete="off" value={f.guardian} onChange={(e) => set("guardian", e.target.value)} {...err("guardian")} className="mt-1" /><FieldError id="guardian-err">{tried ? errors.guardian : null}</FieldError></div>
               <div><Label htmlFor="phone">Family phone</Label><Input id="phone" type="tel" autoComplete="off" value={f.phone} onChange={(e) => set("phone", e.target.value)} {...err("phone")} className="mt-1" /><FieldError id="phone-err">{tried ? errors.phone : null}</FieldError></div>
               <div><Label htmlFor="lang">Language</Label><Select id="lang" value={f.language} onChange={(e) => set("language", e.target.value as Referral["language"])} className="mt-1"><option>English</option><option>Español</option><option>Other</option></Select></div>
               <div>

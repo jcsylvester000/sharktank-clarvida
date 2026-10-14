@@ -5,7 +5,7 @@ const fs = require("fs");
 const BASE = process.argv[2] || "http://localhost:4310";
 const SHOTS = __dirname + "/shots/b2";
 fs.mkdirSync(SHOTS, { recursive: true });
-const PW = "Brighter2026!";
+const PW = require("./demo-password");
 const results = [];
 const ok = (name, pass, detail = "") => { results.push({ name, pass, detail }); console.log(`${pass ? "PASS" : "FAIL"}  ${name}${detail ? "  (" + detail + ")" : ""}`); };
 

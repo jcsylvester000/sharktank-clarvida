@@ -83,7 +83,7 @@ export function LiveControls() {
               <span className={cn("relative inline-flex h-2.5 w-2.5 rounded-full", c.paused ? "bg-warn" : "bg-teal")} />
             </span>
             <span className="hidden font-medium md:inline">Live</span>
-            <span className="font-mono text-xs tabular">{clock.time}</span>
+            <span className="hidden font-mono text-xs tabular sm:inline">{clock.time}</span>
             <span className="hidden text-xs sm:inline">{c.paused ? "Paused" : `${c.speed}x`}</span>
           </button>
         }

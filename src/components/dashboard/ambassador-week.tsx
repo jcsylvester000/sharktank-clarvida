@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { AlertTriangle, ArrowUpRight, NotebookPen, RefreshCw, Sparkles, Clock3 } from "lucide-react";
+import { ArrowUpRight, NotebookPen, RefreshCw, Sparkles, Clock3 } from "lucide-react";
 import { useStore } from "@/lib/store/db";
 import { useCurrentUser, useNow } from "@/lib/store/hooks";
 import { href } from "@/lib/access";
@@ -15,8 +15,8 @@ import type { TouchType } from "@/lib/domain/types";
 import { CapacityChip, StageChip } from "@/components/domain/chips";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Callout, Stat } from "@/components/ui/misc";
-import { Panel, PanelBody, PanelHeader } from "@/components/ui/panel";
+import { Stat } from "@/components/ui/misc";
+import { Panel, PanelHeader } from "@/components/ui/panel";
 import { Dialog, Tip } from "@/components/ui/overlays";
 import { Label, Select, Segmented, Textarea } from "@/components/ui/field";
 import { cn } from "@/components/ui/cn";
@@ -38,11 +38,9 @@ export function AmbassadorWeek({ lead = false }: { lead?: boolean }) {
   const plan = useMemo(() => weeklyPlan(db.tasks, db.orgs, viewId), [db.tasks, db.orgs, viewId]);
   const doneThisWeek = db.tasks.filter((t) => t.ownerId === viewId && t.done && t.doneAt && now - t.doneAt < 7 * D);
   const owned = db.orgs.filter((o) => o.ownerId === viewId);
-  const events = db.events.filter((e) => e.status === "Published" && e.orgIds.some((id) => owned.some((o) => o.id === id)) && now - Date.parse(e.date) < 60 * D);
   const quiet = owned.filter((o) => o.stage === "Quiet" || o.stage === "Dormant" || o.stage === "At risk").sort((a, b) => (a.lastReferralAt ?? 0) - (b.lastReferralAt ?? 0));
   const progs = db.programs.filter((p) => owner.scope.includes(p.state));
   const touches = db.touches.filter((t) => t.byUserId === viewId && now - t.at < 7 * D).length;
-  const sends = db.sendCounts[viewId] ?? 0;
   const org = (id: string) => db.orgs.find((o) => o.id === id);
   const firstName = owner.name.split(" ")[0];
 
@@ -50,12 +48,12 @@ export function AmbassadorWeek({ lead = false }: { lead?: boolean }) {
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-xl text-cv-teal">{lead || me.id !== viewId ? `${firstName}'s week` : "Your week"}</h2>
+          <h2 className="text-xl text-teal-strong">{lead || me.id !== viewId ? `${firstName}'s week` : "Your week"}</h2>
           <p className="text-sm text-ink-2">{owned.length} organizations in {me.id === viewId ? "your" : "the"} territory, {plan.length} actions this week. Each one says why it matters.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
           {me.role !== "ambassador" ? (
-            <Select aria-label="Ambassador" value={viewId} onChange={(e) => setViewId(e.target.value)} className="h-9 w-auto rounded-full">
+            <Select aria-label="Ambassador" value={viewId} onChange={(e) => setViewId(e.target.value)} className="h-9 w-full max-w-full min-w-0 rounded-full sm:w-auto">
               {ambassadors.map((a) => <option key={a.id} value={a.id}>{a.name}, {a.office}</option>)}
             </Select>
           ) : null}
@@ -151,7 +149,7 @@ export function AmbassadorWeek({ lead = false }: { lead?: boolean }) {
                     <span className="font-medium">{p.name}</span>
                     <span className="block text-xs text-ink-3">{p.office}{isPaused(p) ? ", outreach paused" : ""}</span>
                   </span>
-                  <CapacityChip capacity={p.capacity} stale={now - p.capacityUpdatedAt > 7 * D} />
+                  <CapacityChip capacity={p.capacity} staleDays={Math.floor((now - p.capacityUpdatedAt) / D)} />
                 </li>
               ))}
             </ul>

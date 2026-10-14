@@ -1,9 +1,10 @@
 import * as React from "react";
 import { cn } from "./cn";
 
-export function Table({ className, ...props }: React.TableHTMLAttributes<HTMLTableElement>) {
+/** The scroll wrapper is focusable so keyboard users can scroll wide tables on small screens (WCAG 2.1.1). */
+export function Table({ className, label, ...props }: React.TableHTMLAttributes<HTMLTableElement> & { label?: string }) {
   return (
-    <div className="relative w-full overflow-x-auto">
+    <div className="relative w-full overflow-x-auto focus-visible:outline-2 focus-visible:outline-teal" tabIndex={0} role="region" aria-label={label ?? props["aria-label"] ?? "Table"}>
       <table className={cn("w-full border-collapse text-sm", className)} {...props} />
     </div>
   );

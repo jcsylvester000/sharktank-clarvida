@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   Bell, BookOpen, Bot, Building2, Building, ChartColumnBig, Gauge, HeartHandshake, Inbox, Lock, Megaphone, Menu, PhoneIncoming, QrCode, Radar, Rocket, ScrollText,
-  Settings, ShieldCheck, LogOut, Presentation, RotateCcw, Check, X, Activity, LayoutDashboard, Mail, UserCog, Users, FileText, Eye, Timer, Map as MapIcon, Sprout, Lightbulb,
+  Settings, ShieldCheck, LogOut, Presentation, RotateCcw, Check, X, Activity, LayoutDashboard, Mail, UserCog, FileText, Eye, Timer, Map as MapIcon, Sprout, Lightbulb,
 } from "lucide-react";
 import { LiveControls } from "@/components/live/live-controls";
 import { isSimUser } from "@/lib/live/seed";
@@ -25,6 +25,8 @@ import { Popover, PopoverClose, Switch, Dialog } from "@/components/ui/overlays"
 import { cn } from "@/components/ui/cn";
 import { ago } from "@/lib/format";
 import { useGuide } from "./guide-bar";
+import { GlobalSearch } from "./global-search";
+import { switchPersona } from "@/lib/services/core";
 import { Avatar, Logo, PageSkeleton, SyntheticNotice } from "@/components/brand/brand";
 import type { Role, User } from "@/lib/domain/types";
 
@@ -54,7 +56,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const routeKey = `${pathname}?${search.toString()}`;
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
   useEffect(() => {
-    const t = setTimeout(() => setLoadedKey(routeKey), latencyMs(150, 450));
+    const t = setTimeout(() => setLoadedKey(routeKey), latencyMs(100, 220));
     return () => clearTimeout(t);
   }, [routeKey]);
 
@@ -193,16 +195,18 @@ function Sidebar({ user, current, live, className, onNavigate, mobile }: { user:
 function TopBar({ user, onMenu, live }: { user: User; onMenu: () => void; live: boolean }) {
   return (
     <header className="no-print sticky top-0 z-40 bg-teal text-white">
-      <div className="flex h-16 items-center gap-2 px-3 sm:gap-3 sm:px-5">
+      <div className="flex h-16 items-center gap-1 px-2 sm:gap-3 sm:px-5">
         <button className="rounded-full p-2 hover:bg-white/15 lg:hidden" onClick={onMenu} aria-label="Open menu">
           <Menu size={20} />
         </button>
         <Link href={href(landingFor(user.role, live))} className="shrink-0 rounded-md" aria-label="Clarvida Referral Co-Pilot, go to my dashboard">
           <Logo variant="white" width={140} />
         </Link>
-        <span className="hidden border-l border-white/30 pl-3 text-sm font-medium text-white/90 md:inline">Referral Co-Pilot</span>
+        <span className="hidden border-l border-white/30 pl-3 text-sm font-medium text-white md:inline">Referral Co-Pilot</span>
         <div className="flex-1" />
         {live ? <LiveControls /> : <DemoMenu />}
+        {/* Phones keep the logo at its 140 px minimum, so search lives in the menu there. */}
+        <div className="hidden sm:block"><GlobalSearch user={user} /></div>
         <InboxButton user={user} />
         <NotificationsBell user={user} />
         <AccountMenu user={user} />
@@ -265,7 +269,7 @@ function NotificationsBell({ user }: { user: User }) {
         </button>
       </div>
       <ul className="max-h-96 overflow-y-auto" aria-live="polite">
-        {list.length === 0 ? <li className="px-4 py-6 text-center text-sm text-ink-3">You're all caught up.</li> : null}
+        {list.length === 0 ? <li className="px-4 py-6 text-center text-sm text-ink-3">You&apos;re all caught up.</li> : null}
         {list.map((n) => {
           const isUnread = !n.readBy.includes(user.id);
           return (
@@ -309,7 +313,7 @@ function AccountMenu({ user }: { user: User }) {
           <Avatar initials={user.initials} tone={user.avatarTone === "teal" ? "navy" : user.avatarTone} size={34} className="ring-2 ring-white/60" />
           <span className="hidden text-left leading-tight sm:block">
             <span className="block text-sm font-semibold">{user.name}</span>
-            <span className="block text-xs text-white/80">{ROLE_LABEL[user.role]}</span>
+            <span className="block text-xs text-white">{ROLE_LABEL[user.role]}</span>
           </span>
         </button>
       }
@@ -372,10 +376,30 @@ function AccountMenu({ user }: { user: User }) {
               </li>
             </>
           ) : null}
-          <li>
-            <button className="flex w-full items-center gap-2.5 px-4 py-2 text-left hover:bg-canvas" onClick={() => setSwitching(true)}>
-              <Users size={16} className="text-ink-3" /> Switch account (demo)
-            </button>
+          <li className="border-t border-line-2 px-4 pb-1 pt-2.5">
+            {/* AC-FR-24: two clicks to switch (menu, then a face). The full list with roles is one step further. */}
+            <p className="mb-1.5 flex items-center justify-between text-xs font-semibold text-ink-3">
+              Switch account (demo)
+              <button className="link text-xs font-medium" onClick={() => setSwitching(true)}>Show names</button>
+            </p>
+            <div className="grid grid-cols-6 gap-1.5">
+              {users.filter((u) => u.active && !isSimUser(u.id) && u.id !== user.id).map((u) => (
+                <PopoverClose asChild key={u.id}>
+                  <button
+                    title={`${u.name}, ${ROLE_LABEL[u.role]}`}
+                    aria-label={`Switch to ${u.name}, ${ROLE_LABEL[u.role]}`}
+                    className="rounded-full focus-visible:outline-2 focus-visible:outline-teal"
+                    onClick={async () => {
+                      await auth.switchAccount(u.id);
+                      router.push(href(landingFor(u.role, false)));
+                      toast.success(`Signed in as ${u.name}`);
+                    }}
+                  >
+                    <Avatar initials={u.initials} tone={u.avatarTone} size={34} />
+                  </button>
+                </PopoverClose>
+              ))}
+            </div>
           </li>
         </ul>
       )}
@@ -396,6 +420,13 @@ function AccountMenu({ user }: { user: User }) {
   );
 }
 
+/** FT-164 Scenario launcher: sign in as the right person on the right page for a 'what happens when...' moment. */
+const SCENARIOS: { label: string; hint: string; userId: string; route: string; query?: Record<string, string> }[] = [
+  { label: "A referral goes overdue", hint: "Ray sees the escalation and can reassign it.", userId: "u-ray", route: "/app/referral", query: { id: "REF-NC-24806" } },
+  { label: "A program is full", hint: "ABA is on waitlist: outreach for it is paused everywhere.", userId: "u-priya", route: "/app/capacity" },
+  { label: "Someone pastes client details", hint: "Try it in Maria's draft: the guard blocks it and logs it.", userId: "u-maria", route: "/app/organization", query: { id: "o1", tab: "outreach" } },
+];
+
 function DemoMenu() {
   const demo = useStore((s) => s.db.demo);
   const mutate = useStore((s) => s.mutate);
@@ -408,7 +439,7 @@ function DemoMenu() {
     <>
       <Popover
         trigger={
-          <button className="inline-flex h-9 items-center gap-1.5 rounded-full border border-white/40 px-3 text-sm font-semibold hover:bg-white/15" aria-label="Demo controls">
+          <button className="inline-flex h-9 items-center gap-1.5 rounded-full border border-white/40 px-2.5 text-sm sm:px-3 font-semibold hover:bg-white/15" aria-label="Demo controls">
             <Presentation size={16} /> <span className="hidden sm:inline">Demo</span>
           </button>
         }
@@ -435,6 +466,26 @@ function DemoMenu() {
                 >
                   {m === "demo" ? "Demo: continuous" : "Business hours"}
                 </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="mb-1 text-xs font-medium text-ink-2">Scenarios: one click to set the scene</p>
+            <div className="grid gap-1">
+              {SCENARIOS.map((sc) => (
+                <PopoverClose asChild key={sc.label}>
+                  <button
+                    className="rounded-md border border-line px-2.5 py-1.5 text-left text-sm hover:bg-canvas"
+                    onClick={() => {
+                      mutate((d) => { d.demo.guideOn = false; if (d.session?.userId !== sc.userId) switchPersona(d, sc.userId); }, undefined, sys);
+                      router.push(href(sc.route, sc.query));
+                      toast.info(sc.label, { description: sc.hint });
+                    }}
+                  >
+                    <span className="font-medium">{sc.label}</span>
+                    <span className="block text-xs text-ink-2">{sc.hint}</span>
+                  </button>
+                </PopoverClose>
               ))}
             </div>
           </div>
@@ -507,6 +558,7 @@ function IdleGuard() {
   const router = useRouter();
   const [warnLeft, setWarnLeft] = useState<number | null>(null);
   const last = useRef(Date.now());
+  const forced = useRef<number | null>(null);
   const paused = demo.guideOn || demo.presenter;
 
   useEffect(() => {
@@ -514,7 +566,8 @@ function IdleGuard() {
     const evs = ["mousemove", "keydown", "click", "scroll", "touchstart"];
     evs.forEach((e) => window.addEventListener(e, bump, { passive: true }));
     // Idle test: jump to 20 seconds before automatic sign-out.
-    const test = () => { last.current = Date.now() - demo.idleMinutes * 60_000 + 20_000; setTimeout(() => { last.current = Date.now() - demo.idleMinutes * 60_000 + 20_000; }, 50); };
+    // The warning is forced on a fixed 20-second deadline, so the click that triggered it doesn't count as activity.
+    const test = () => { forced.current = Date.now() + 20_000; setWarnLeft(20); };
     window.addEventListener("cv-idle-test", test);
     return () => { evs.forEach((e) => window.removeEventListener(e, bump)); window.removeEventListener("cv-idle-test", test); };
   }, [demo.idleMinutes]);
@@ -524,7 +577,7 @@ function IdleGuard() {
     const limit = demo.idleMinutes * 60_000;
     const t = setInterval(() => {
       const idle = Date.now() - last.current;
-      const left = Math.ceil((limit - idle) / 1000);
+      const left = forced.current ? Math.ceil((forced.current - Date.now()) / 1000) : Math.ceil((limit - idle) / 1000);
       if (left <= 0) {
         clearInterval(t);
         void auth.signOutNow("idle").then(() => router.replace("/?idle=1"));
@@ -537,7 +590,7 @@ function IdleGuard() {
   return (
     <Dialog
       open={warnLeft !== null}
-      onOpenChange={(o) => { if (!o) { last.current = Date.now(); setWarnLeft(null); } }}
+      onOpenChange={(o) => { if (!o) { forced.current = null; last.current = Date.now(); setWarnLeft(null); } }}
       title="Are you still there?"
       description={`For your security, you'll be signed out in ${warnLeft ?? 0} seconds.`}
       footer={
@@ -545,7 +598,7 @@ function IdleGuard() {
           <Button variant="secondary" onClick={() => { void auth.signOutNow().then(() => router.replace("/")); }}>
             <X size={15} /> Sign out now
           </Button>
-          <Button onClick={() => { last.current = Date.now(); setWarnLeft(null); mutate((d) => audit(d, { action: "Session extended", zone: "Identity", category: "sign-in" }), undefined, { allowReadOnly: true }); }}>
+          <Button onClick={() => { forced.current = null; last.current = Date.now(); setWarnLeft(null); mutate((d) => audit(d, { action: "Session extended", zone: "Identity", category: "sign-in" }), undefined, { allowReadOnly: true }); }}>
             Stay signed in
           </Button>
         </>

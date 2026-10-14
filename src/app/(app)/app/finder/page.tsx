@@ -1,7 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { toast } from "sonner";
 import { CirclePause, List, Map as MapIcon, ArrowUpRight, Database, Expand } from "lucide-react";
 import { OsmMap, type MapMarker } from "@/components/map/osm-map";
 import { STAGE_PIN, TYPE_GLYPH } from "@/components/map/map-style";
@@ -13,7 +12,6 @@ import { href } from "@/lib/access";
 import { fitScore, fitBand, type FitResult } from "@/lib/rules/fitScore";
 import { isPaused } from "@/lib/rules/outreach";
 import { audit } from "@/lib/services/core";
-import { addVisitTask } from "@/lib/services/outreach";
 import type { Organization, OrgType, Stage } from "@/lib/domain/types";
 import { StageChip } from "@/components/domain/chips";
 import { Badge } from "@/components/ui/badge";
@@ -68,13 +66,12 @@ export default function Finder() {
   const hiddenPaused = rows.filter(({ org }) => org.distanceMiles <= Number(radius) && pausedOnly(org)).length;
   const officePoint = OFFICES.find((o) => o.locationId === officeId) ?? OFFICES[0];
   const markers: MapMarker[] = [
-    ...filtered.map(({ org, fit }) => ({ id: org.id, ...orgPoint(org), label: `${org.name} · fit ${fit.score}`, glyph: TYPE_GLYPH[org.type], color: STAGE_PIN[org.stage].fill, ring: STAGE_PIN[org.stage].ring, selected: org.id === selectedId })),
+    ...filtered.map(({ org, fit }) => ({ id: org.id, ...orgPoint(org), label: `${org.name} · fit ${fit.score}`, glyph: TYPE_GLYPH[org.type], color: STAGE_PIN[org.stage].fill, text: STAGE_PIN[org.stage].text, ring: STAGE_PIN[org.stage].ring, selected: org.id === selectedId })),
     { ...officePoint, id: "office", label: officePoint.name, shape: "office" as const, color: "#1d7fa3" },
   ];
   const allTypes = Array.from(new Set(rows.map((r) => r.org.type)));
 
   const viewBreakdown = (orgId: string) => mutate((d) => audit(d, { action: "Viewed score breakdown", objectId: orgId, zone: "Outreach" }));
-  const addRoute = (orgId: string) => { mutate((d) => addVisitTask(d, orgId, me.id)); toast.success("Visit added to your week"); };
 
   return (
     <div>

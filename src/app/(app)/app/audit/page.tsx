@@ -123,7 +123,7 @@ export default function AuditLog() {
                 </summary>
                 <ul className="mt-2 space-y-1 border-l-2 border-line-2 pl-3 text-sm">
                   {evs.slice(0, 25).map((e) => (
-                    <li key={e.id} className="flex flex-wrap gap-x-2"><span className="w-20 shrink-0 text-ink-3">{ago(e.at, now)}</span><span>{e.action}</span>{e.objectId ? <span className="font-mono text-xs text-ink-3">{e.objectId}</span> : null}</li>
+                    <li key={e.id} className="flex flex-wrap gap-x-2"><span className="w-20 shrink-0 text-ink-3">{ago(e.at, now)}</span><span>{e.action}</span>{e.objectId && !/^PG-/.test(e.objectId) ? <span className="font-mono text-xs text-ink-3">{e.objectId}</span> : null}</li>
                   ))}
                 </ul>
               </details>
@@ -139,7 +139,7 @@ export default function AuditLog() {
                     <TD className="whitespace-nowrap" title={fmtDateTime(e.at)}>{ago(e.at, now)}</TD>
                     <TD><span className="font-medium">{e.actorName}</span><span className="block text-xs text-ink-3">{roleLabel(e.role)}</span></TD>
                     <TD className="max-w-[28rem]">{e.action}</TD>
-                    <TD className="font-mono text-xs">{e.objectId ?? "—"}</TD>
+                    <TD className="font-mono text-xs">{e.objectId && !/^PG-/.test(e.objectId) ? e.objectId : "—"}</TD>
                     <TD><ZoneBadge zone={e.zone} compact /></TD>
                     <TD className="whitespace-nowrap text-xs text-ink-3">{e.device}</TD>
                   </TR>

@@ -3,15 +3,15 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowUpRight, CalendarPlus, Car, Layers, LocateFixed, MapPin, Route as RouteIcon, Trash2, X, Navigation } from "lucide-react";
+import { ArrowUpRight, CalendarPlus, Car, Layers, MapPin, Route as RouteIcon, Trash2, X, Navigation } from "lucide-react";
 import { useStore } from "@/lib/store/db";
 import { useCurrentUser, useNow } from "@/lib/store/hooks";
 import { accessForUser, pageById } from "@/lib/access";
-import { OFFICES, countyDemand, coverageGaps, driveMinutes, milesBetween, officeCapacity, orgPoint, orgPoints, planRoute, type LatLng } from "@/lib/geo";
+import { COUNTY_CENTROIDS, OFFICES, countyDemand, coverageGaps, driveMinutes, officeCapacity, orgPoint, orgPoints, planRoute } from "@/lib/geo";
 import { fitScore } from "@/lib/rules/fitScore";
-import { phiScan } from "@/lib/rules/phi";
+
 import { suppress, isSuppressed } from "@/lib/rules/suppress";
-import { addVisitTask, checkIn, CHECKIN_RADIUS_MI, recordBlocked, saveRoute } from "@/lib/services/outreach";
+import { addVisitTask, saveRoute } from "@/lib/services/outreach";
 import type { Organization, OrgType, Stage } from "@/lib/domain/types";
 import { CheckInDialog } from "@/components/map/check-in-dialog";
 import { OsmMap, type MapBubble, type MapCircle, type MapLine, type MapMarker } from "@/components/map/osm-map";
@@ -20,10 +20,10 @@ import { StageChip, CapacityChip } from "@/components/domain/chips";
 import { PageHeader } from "@/components/ui/misc";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Label, Segmented, Select, Textarea, FieldError } from "@/components/ui/field";
-import { Dialog, Switch, Tabs, TabList, Tab, TabPanel } from "@/components/ui/overlays";
+import { Segmented, Select } from "@/components/ui/field";
+import { Switch, Tabs, TabList, Tab, TabPanel } from "@/components/ui/overlays";
 import { ago } from "@/lib/format";
-import { cn } from "@/components/ui/cn";
+
 
 type LayerKey = "orgs" | "offices" | "visits" | "route" | "heat" | "gaps" | "capacity" | "drive";
 const LAYER_LABEL: Record<LayerKey, string> = {
@@ -73,7 +73,7 @@ function MapExplorer() {
       const st = STAGE_PIN[o.stage];
       const routeIdx = planned && layers.route ? route.order.findIndex((x) => x.id === o.id) : -1;
       for (const p of orgPoints(o)) {
-        markers.push({ id: o.id, lat: p.lat, lng: p.lng, label: `${p.label} · ${o.stage}`, glyph: TYPE_GLYPH[o.type], color: st.fill, ring: layers.gaps && gaps.some((g) => g.type === o.type) ? "#ffb81c" : st.ring, selected: o.id === selectedId, cluster: routeIdx < 0, order: routeIdx >= 0 && (p.key === o.id || p.key === `${o.id}-1`) ? routeIdx + 1 : undefined });
+        markers.push({ id: o.id, lat: p.lat, lng: p.lng, label: `${p.label} · ${o.stage}`, glyph: TYPE_GLYPH[o.type], color: st.fill, text: st.text, ring: layers.gaps && gaps.some((g) => g.type === o.type) ? "#ffb81c" : st.ring, selected: o.id === selectedId, cluster: routeIdx < 0, order: routeIdx >= 0 && (p.key === o.id || p.key === `${o.id}-1`) ? routeIdx + 1 : undefined });
       }
     }
   }
@@ -100,6 +100,10 @@ function MapExplorer() {
   const lines: MapLine[] = planned && layers.route && route.order.length ? [{ id: "route", points: [office, ...route.order.map((x) => x.point), office], color: "#03374a", dashed: false }] : [];
   const maxN = Math.max(...demand.map((c) => c.n), 1);
   const bubbles: MapBubble[] = layers.heat || layers.capacity ? demand.map((c) => ({ id: c.key, lat: c.point.lat, lng: c.point.lng, radiusMi: 2 + 6 * (c.n / maxN), color: "#28a8e0", opacity: isSuppressed(c.n) ? 0.12 : 0.18 + 0.4 * (c.n / maxN), label: `${c.county} County: ${suppress(c.n)} referrals in 90 days` })) : [];
+
+  // FT-182: in the Live sandbox, counties with a referral in the last simulated hour pulse (county only, never a count or address).
+  const liveCounties = db.live ? Array.from(new Set(db.referrals.filter((r) => now - r.receivedAt < 3_600_000).map((r) => `${r.state}|${r.county}`))).filter((k) => COUNTY_CENTROIDS[k]) : [];
+  for (const k of liveCounties) bubbles.push({ id: `live-${k}`, lat: COUNTY_CENTROIDS[k].lat, lng: COUNTY_CENTROIDS[k].lng, radiusMi: 2.5, color: "#ffb81c", opacity: 0.35, label: `${k.split("|")[1]} County: new referrals in the last hour (live)`, pulse: true });
 
   const toggleStop = (id: string) => { setPlanned(false); setStops((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id])); };
   const onMarker = (id: string) => {
@@ -134,7 +138,7 @@ function MapExplorer() {
               <option value="">All stages</option>
               {(Object.keys(STAGE_PIN) as Stage[]).map((s) => <option key={s} value={s}>{s}</option>)}
             </Select>
-            <span className="ml-auto text-xs text-ink-3">{visible.length} organizations within {radius} miles</span>
+            <span className="ml-auto text-xs text-ink-3">{db.live ? <span className="mr-2 font-semibold text-teal-strong">Live: amber circles pulse on counties with new referrals (county only).</span> : null}{visible.length} organizations within {radius} miles</span>
           </div>
           <OsmMap
             center={office}
@@ -169,7 +173,7 @@ function MapExplorer() {
                     {[...visible].sort((a, b) => (fits.get(b.id)?.score ?? 0) - (fits.get(a.id)?.score ?? 0)).map((o) => (
                       <li key={o.id}>
                         <button className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-canvas" onClick={() => setSelectedId(o.id)}>
-                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ background: STAGE_PIN[o.stage].fill }}>{TYPE_GLYPH[o.type]}</span>
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold" style={{ background: STAGE_PIN[o.stage].fill, color: STAGE_PIN[o.stage].text }}>{TYPE_GLYPH[o.type]}</span>
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-sm font-medium">{o.name}</span>
                             <span className="block text-xs text-ink-3">Fit {fits.get(o.id)?.score} · {driveMinutes(o.distanceMiles)} min drive · {o.stage}</span>

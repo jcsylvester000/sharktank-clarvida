@@ -56,7 +56,7 @@ export function Skeleton({ className, style }: { className?: string; style?: Rea
 /** Page-level skeleton shown while the simulated API answers (FT-021, AC-FR-15). */
 export function PageSkeleton({ rows = 4 }: { rows?: number }) {
   return (
-    <div aria-busy="true" aria-label="Loading" className="space-y-6">
+    <div role="status" aria-busy="true" aria-label="Loading" className="space-y-6">
       <div className="space-y-3">
         <Skeleton className="h-4 w-40" />
         <Skeleton className="h-8 w-80 max-w-full" />

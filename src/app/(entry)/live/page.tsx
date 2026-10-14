@@ -42,6 +42,7 @@ export default function LiveEntry() {
           <p className="font-display text-lg font-semibold">Clarvida Referral Co-Pilot</p>
           <p className="text-xs text-ink-3">Live sandbox. Synthetic data only.</p>
         </div>
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- leaving the sandbox needs a full reload to switch storage */}
         <a href="/" onClick={(e) => { e.preventDefault(); switchMode("demo", "/"); }} className="inline-flex h-9 items-center gap-2 rounded-md border border-line bg-surface px-3 text-sm font-medium hover:bg-sunken">
           <PlayCircle size={15} /> Pitch demo
         </a>

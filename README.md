@@ -82,7 +82,12 @@ node b1-accounts.js            # Batch 1: accounts, sign-in, MFA, welcome, dashb
 node b2-care.js                # Batch 2: partner form → intake → referral → status, consent, X-ray, redirect, escalation
 node b3-outreach.js            # Batch 3: Map Explorer, finder map, brief/draft/PHI/approve, nurture, content, scope
 node b4-insights.js            # Batch 4: story, 13-step guided demo, presenter window, impact Ask/X-ray, pilot, admin approvals, audit
+node b5-acceptance.js          # Batch 5: 45 pages × 3 screens, axe, 5 timed handoffs, 5 guided runs offline, reset, privacy, storage, brand
+node b5-features.js            # Batch 5: feature spot checks (capacity pause, fax entry, duplicates, Spanish, settings, idle, live map)
 ```
+
+Or run everything in one go (starts its own server): `cd qa && npm run qa` (about 15 minutes).
+`qa/fill_ac.py` writes the results into a copy of the Acceptance Criteria workbook. Old v2 scripts are in `qa/legacy-v2/` for reference only.
 
 ## Build status
 
@@ -92,4 +97,8 @@ node b4-insights.js            # Batch 4: story, 13-step guided demo, presenter 
 | B2 | Care loop: branded partner form (specific errors, nearest office, sample fill), reference-only confirmation, signed status links, live handoff, intake queue with next best call, brand response clock, referral detail, warm redirect, escalation + reassign, referrer notices and team activity | Done (Oct 14) |
 | B3 | Outreach and maps: OpenStreetMap Map Explorer (POIs by stage, clustering, 5/10/25-mile rings, drive times, route planner, location check-in, referral heat, coverage gaps, need vs capacity), finder with map, organization (log visit/call, check-in, approvals in Demo Inbox), Nurture Journeys with warm handoff, Content and Webinar Ideas | Done (Oct 14) |
 | B4 | Insights, governance and presentation: Before/After story, 13-step guided demo with account switching, presenter window (timer, 3-minute cut, fallbacks), Impact Dashboard (Privacy X-ray, source-to-intake flow, Ask refusal), Impact and Pilot (ROI sliders the judge can move, scorecard, the ask, readiness gates, sources), Trust and Security (what is simulated), two-person approval with notifications | Done (Oct 14) |
-| B5 | QA against the Acceptance Criteria workbook and freeze | Next |
+| B5 | QA against the Acceptance Criteria workbook: 170 automated checks, filled AC workbook, release candidate 3.0.0-rc1 | Done (Oct 14) |
+
+## Before the pitch (people, not code)
+
+Open items from the Acceptance Criteria workbook that need the team or Clarvida: funding amount (OQ-02), the three baselines, trademark ® vs ℠, hallway test (Oct 18-19), three timed rehearsals by two presenters, Q&A rehearsal, backup video, second device, a manual pass on Edge / Safari iOS / Chrome Android, and a look at the street tiles on the hosted build.

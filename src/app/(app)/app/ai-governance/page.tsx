@@ -55,7 +55,7 @@ export default function AIGovernance() {
       </div>
       {failing.length ? (
         <Callout tone="crit" className="mb-5" icon={<Ban size={18} className="text-crit" />} title="Release blocked">
-          {failing.map((e) => `${e.suite} passed ${e.passed} of ${e.cases} (needs ${pct(e.threshold)})`).join("; ")}. Template changes can't ship until every suite meets its threshold.
+          {failing.map((e) => `${e.suite} passed ${e.passed} of ${e.cases} (needs ${pct(e.threshold)})`).join("; ")}. Template changes can&apos;t ship until every suite meets its threshold.
         </Callout>
       ) : null}
 

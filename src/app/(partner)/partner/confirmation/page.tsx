@@ -74,7 +74,7 @@ function Confirmation() {
           <div className="mt-3 rounded-md bg-canvas p-4 text-sm">
             <p className="font-medium">{notice.subject}</p>
             <p className="mt-1 text-ink-2">{notice.text}</p>
-            <p className="mt-2 text-xs text-teal underline">{t.track}</p>
+            <p className="mt-2 text-xs text-teal-strong underline">{t.track}</p>
           </div>
         </section>
       ) : null}

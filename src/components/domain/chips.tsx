@@ -32,13 +32,14 @@ export function StageChip({ stage }: { stage: Stage }) {
 }
 
 const CAP_TONE: Record<Capacity, Tone> = { Open: "solid", Limited: "sky", Waitlist: "hl", Closed: "charcoal" };
-export function CapacityChip({ capacity, stale }: { capacity: Capacity; stale?: boolean }) {
+/** staleDays: days since capacity was last confirmed; shown when over 7 (FT-112). */
+export function CapacityChip({ capacity, staleDays }: { capacity: Capacity; staleDays?: number }) {
   return (
     <span className="inline-flex items-center gap-1.5">
       <Badge tone={CAP_TONE[capacity]} icon={capacity === "Open" ? <CircleCheck size={12} /> : capacity === "Limited" ? <Hourglass size={12} /> : <CirclePause size={12} />}>
         {capacity}
       </Badge>
-      {stale ? <Badge tone="hl" icon={<Clock3 size={12} />}>Stale</Badge> : null}
+      {staleDays && staleDays > 7 ? <Badge tone="hl" icon={<Clock3 size={12} />}>Not confirmed in {staleDays} days</Badge> : null}
     </span>
   );
 }

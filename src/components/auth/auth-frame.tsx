@@ -13,7 +13,6 @@ export function AuthFrame({ children, aside, wide }: { children: React.ReactNode
           <span aria-hidden className="absolute -bottom-10 -left-10 h-44 w-44 rounded-tr-[176px] bg-cv-skylight/70" />
           <picture>
             <source srcSet="/brand/hero-family.webp" type="image/webp" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand/hero-family.jpg" alt="A smiling family together outdoors (Clarvida brand photography)" width={610} height={410} className="relative w-full rounded-[var(--radius-panel)] object-cover shadow-sm" fetchPriority="high" />
           </picture>
         </div>

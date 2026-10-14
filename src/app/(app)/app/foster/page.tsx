@@ -38,7 +38,7 @@ export default function FosterPipeline() {
       <PageHeader
         title="Foster Pipeline"
         description="Recruiting foster families is the same problem as referrals: interest arrives, people wait too long, and nobody knows where they drop off."
-        meta={<Badge tone="hl">Phase 3 preview. Illustrative data.</Badge>}
+        meta={<Badge tone="hl">Release 3 preview. Illustrative data.</Badge>}
       />
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Inquiries, 90 days" value={STAGES[0].n} />

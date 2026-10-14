@@ -30,14 +30,15 @@ interface SliderDef {
   fmt: (v: number) => string;
   hint: string;
   source: string; // where the default comes from (FT-126)
+  oq?: string; // open question ID, shown only in Explain mode
 }
 const pctFmt = (v: number) => `${Math.round(v * 100)}%`;
 const SLIDERS: { group: string; items: SliderDef[] }[] = [
   {
     group: "Families reaching intake",
     items: [
-      { key: "referralsPerMonth", label: "Referrals per month", min: 20, max: 1000, step: 10, fmt: (v) => String(v), hint: "Across the pilot offices", source: "Placeholder until Clarvida baseline (OQ-03)" },
-      { key: "lostShare", label: "Share lost before first contact", min: 0, max: 0.8, step: 0.01, fmt: pctFmt, hint: "Families never reached today", source: "Placeholder until Clarvida baseline (OQ-03)" },
+      { key: "referralsPerMonth", label: "Referrals per month", min: 20, max: 1000, step: 10, fmt: (v) => String(v), hint: "Across the pilot offices", source: "Placeholder until Clarvida baseline", oq: "OQ-03" },
+      { key: "lostShare", label: "Share lost before first contact", min: 0, max: 0.8, step: 0.01, fmt: pctFmt, hint: "Families never reached today", source: "Placeholder until Clarvida baseline", oq: "OQ-03" },
       { key: "reduction", label: "Expected reduction in that loss", min: 0, max: 0.8, step: 0.01, fmt: pctFmt, hint: "From the clock, escalation and routing", source: "Assumption. Evidence on speed: 82% attend when booked same day vs 29% after 30 days (Pace et al., Ann Fam Med 2018)" },
       { key: "conversion", label: "Intake conversion of recovered referrals", min: 0, max: 1, step: 0.01, fmt: pctFmt, hint: "Of families reached, share who start", source: "Placeholder until Clarvida baseline" },
     ],
@@ -62,6 +63,7 @@ const WEEKS = 30;
 export default function ImpactPilot() {
   const me = useCurrentUser()!;
   const db = useStore((s) => s.db);
+  const explain = db.demo.showBrdTags;
   const mutate = useStore((s) => s.mutate);
   const a = db.roi;
   const out = roi(a);
@@ -120,7 +122,7 @@ export default function ImpactPilot() {
                     </div>
                     <input data-guide={s.key === "referralsPerMonth" ? "roi-slider" : undefined} id={`roi-${s.key}`} type="range" min={s.min} max={s.max} step={s.step} value={a[s.key]} onChange={(e) => set(s.key, Number(e.target.value))} className="mt-1.5 w-full accent-teal" aria-describedby={`roi-${s.key}-hint`} />
                     <p id={`roi-${s.key}-hint`} className="text-xs text-ink-3">{s.hint}</p>
-                    <p className={`mt-0.5 text-[11px] ${s.source.startsWith("Placeholder") ? "font-semibold text-warn" : "text-teal-strong"}`}>{s.source}</p>
+                    <p className={`mt-0.5 text-[11px] ${s.source.startsWith("Placeholder") ? "font-semibold text-warn" : "text-teal-strong"}`}>{s.source}{explain && s.oq ? ` (${s.oq})` : ""}</p>
                   </div>
                 ))}
               </fieldset>
@@ -150,7 +152,7 @@ export default function ImpactPilot() {
           <PanelHeader title="The 90-day pilot scorecard" description="Gastonia, NC and Colorado Springs, CO. Targets are goals, not guarantees; baselines are collected before go-live." />
           <PanelBody className="p-0">
             <Table>
-              <THead><tr><TH>Measure</TH><TH>Baseline today</TH><TH>Pilot target</TH><TH>How it's measured</TH><TH className="text-right">In this demo</TH></tr></THead>
+              <THead><tr><TH>Measure</TH><TH>Baseline today</TH><TH>Pilot target</TH><TH>How it&apos;s measured</TH><TH className="text-right">In this demo</TH></tr></THead>
               <tbody>
                 {scorecard.map(([m, base, target, how, live]) => (
                   <TR key={m}>
@@ -180,7 +182,7 @@ export default function ImpactPilot() {
             <div>
               <p className="text-sm text-ink-2">Fund a 90-day pilot in two offices</p>
               <p className={`num mt-1 text-2xl ${db.ask === "To confirm with Clarvida" ? "text-ink-3" : "text-ink"}`}>{db.ask}</p>
-              {db.ask === "To confirm with Clarvida" ? <p className="text-xs font-semibold text-warn">Placeholder until Clarvida confirms the amount (OQ-02)</p> : null}
+              {db.ask === "To confirm with Clarvida" ? <p className="text-xs font-semibold text-warn">Placeholder until Clarvida confirms the amount{explain ? " (OQ-02)" : ""}</p> : null}
             </div>
             <ol className="space-y-3" aria-label="Pilot timeline">
               {PHASES.map((p) => (

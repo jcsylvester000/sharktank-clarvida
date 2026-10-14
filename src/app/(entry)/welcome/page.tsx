@@ -74,7 +74,7 @@ export default function Welcome() {
       <header className="bg-teal">
         <div className="mx-auto flex h-16 max-w-3xl items-center justify-between px-4 sm:px-6">
           <Logo variant="white" width={140} />
-          <span className="text-sm font-medium text-white/90">Welcome</span>
+          <span className="text-sm font-medium text-white">Welcome</span>
         </div>
       </header>
       <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">

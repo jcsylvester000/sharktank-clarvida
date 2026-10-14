@@ -26,7 +26,9 @@ export function latencyMs(min = 150, max = 600): number {
 export const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 /** A read: waits like the network would, then returns data computed from the current database. */
-export async function get<T>(path: string, read: (db: DB) => T, ms = latencyMs()): Promise<T> {
+// Reads stay at 150-330 ms so a page change (shell 100-220 ms + one read) lands within 600 ms (AC-NF-01);
+// writes use the full 150-600 ms range.
+export async function get<T>(path: string, read: (db: DB) => T, ms = latencyMs(150, 330)): Promise<T> {
   await wait(ms);
   const out = read(useStore.getState().db);
   log("GET", path, ms, true);

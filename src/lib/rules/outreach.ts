@@ -29,7 +29,7 @@ export function sendChecks(input: {
   const paused = input.program ? input.program.capacity === "Waitlist" || input.program.capacity === "Closed" : false;
   return [
     { id: "phi", label: "No client details", pass: !phi.blocked, detail: phi.blocked ? `Blocked: possible client details (${phi.category}). Remove them to continue.` : "PHI scan found no client details." },
-    { id: "footer", label: "Unsubscribe footer", pass: input.text.includes(FOOTER_MARKER), detail: input.text.includes(FOOTER_MARKER) ? "Sender, address and unsubscribe link present (CAN-SPAM)." : "Put back the footer with the unsubscribe link." },
+    { id: "footer", label: "Unsubscribe footer", pass: input.text.includes(FOOTER_MARKER), detail: input.text.includes(FOOTER_MARKER) ? "Sender, address and unsubscribe link present (CAN-SPAM)." : input.text.trim() ? "Put back the footer with the unsubscribe link." : "Added to every draft automatically." },
     { id: "optout", label: "Recipient has not opted out", pass: Boolean(input.contact) && !input.contact!.optOut, detail: !input.contact ? "Choose a recipient." : input.contact.optOut ? "This contact opted out. Choose another contact." : `${input.contact.name} can receive email.` },
     { id: "cap", label: "Your weekly send cap", pass: input.userSends < input.cap, detail: `Your sends this week: ${input.userSends} / ${input.cap}` },
     { id: "orgcap", label: "Organization weekly cap", pass: input.orgSends < input.orgCap, detail: `Emails to this organization this week: ${input.orgSends} / ${input.orgCap}` },

@@ -1,6 +1,6 @@
 {
   "name": "clarvida-sharktank-v3",
-  "version": "3.0.0-b4",
+  "version": "3.0.0-rc1",
   "private": true,
   "description": "Clarvida Referral Co-Pilot, Shark Tank prototype v3 (branded, account-based, synthetic data, no database).",
   "scripts": {
@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "serve out -l 3000",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "5.2.7",
@@ -36,6 +37,8 @@
     "@types/qrcode": "1.5.5",
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.1",
+    "eslint": "9.39.1",
+    "eslint-config-next": "16.3.6",
     "serve": "14.2.4",
     "tailwindcss": "4.1.13",
     "typescript": "5.9.3",

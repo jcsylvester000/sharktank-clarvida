@@ -49,7 +49,7 @@ export function Checkbox({ className, label, ...props }: React.InputHTMLAttribut
 /** Segmented control: a small radio group rendered as buttons. */
 export function Segmented<T extends string>({ value, onChange, options, label, size = "md", className }: { value: T; onChange: (v: T) => void; options: { value: T; label: React.ReactNode }[]; label: string; size?: "sm" | "md"; className?: string }) {
   return (
-    <div role="radiogroup" aria-label={label} className={cn("inline-flex rounded-md border border-line bg-sunken p-0.5", className)}>
+    <div role="radiogroup" aria-label={label} className={cn("inline-flex max-w-full flex-wrap rounded-md border border-line bg-sunken p-0.5", className)}>
       {options.map((o) => {
         const on = o.value === value;
         return (

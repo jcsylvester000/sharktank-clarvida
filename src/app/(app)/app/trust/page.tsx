@@ -107,6 +107,20 @@ export default function TrustSecurity() {
         </PanelBody>
       </Panel>
 
+      <Panel className="mb-5" data-guide="runs-on">
+        <PanelHeader title="Where it would run" description="Built on what Clarvida already has, so approval reviews existing vendors rather than new ones." />
+        <PanelBody className="grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
+          {[
+            ["Clarvida's AWS environment", "Hosting, database and the AI model run inside Clarvida's existing AWS account, under its existing BAA."],
+            ["Clarvida single sign-on", "Staff sign in with their Clarvida accounts and MFA. Partners use signed links, not accounts."],
+            ["The approved CRM", "Partner emails are queued in Clarvida's approved CRM, with its unsubscribe handling."],
+            ["No new subprocessors", "Nothing in the pilot adds a vendor that touches client data. Statewide referral platforms keep working: their referrals come in as a source, not a replacement."],
+          ].map(([t, d]) => (
+            <div key={t} className="rounded-2xl bg-cv-ice px-4 py-3"><p className="font-semibold text-teal-strong">{t}</p><p className="mt-1 text-ink-2">{d}</p></div>
+          ))}
+        </PanelBody>
+      </Panel>
+
       <Panel className="mb-5 border-cv-amber/60" data-guide="simulated">
         <PanelHeader title="What is simulated in this prototype" description="Realism comes from behaviour and polish, never from pretending data is real." />
         <PanelBody className="grid gap-x-8 gap-y-2 text-sm md:grid-cols-2">

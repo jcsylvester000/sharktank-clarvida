@@ -96,13 +96,15 @@ export const useStore = create<StoreState>((set, get) => ({
 
   hydrate: () => {
     if (get().hydrated) return;
+    // Read this window's session first: a first load or a re-seed after a version bump must not sign the window out.
+    const session = readSession();
     let db = readStorage();
     let memoryOnly = false;
     if (!db) {
-      db = freshSeed();
+      db = { ...freshSeed(), session };
       memoryOnly = !writeStorage(db);
     }
-    db = { ...db, session: readSession() };
+    db = { ...db, session };
     setClock(db.live?.clock);
     set({ db, hydrated: true, memoryOnly });
 

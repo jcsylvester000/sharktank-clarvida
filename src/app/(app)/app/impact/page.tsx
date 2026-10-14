@@ -24,7 +24,6 @@ import { Callout, PageHeader, Stat } from "@/components/ui/misc";
 import { Panel, PanelBody, PanelHeader } from "@/components/ui/panel";
 import { Table, THead, TH, TD, TR } from "@/components/ui/table";
 
-const D = 86_400_000;
 type Mode = "today" | "with";
 type StateFilter = "ALL" | "NC" | "CO";
 
@@ -110,7 +109,7 @@ export default function ImpactDashboard() {
                     <span className="text-sm tabular text-ink-2">{f.totals.refs}</span>
                   </div>
                   <Callout tone="warn" icon={<EyeOff size={16} className="text-warn" />} title="We can't tell which partners send families, or whether they were reached.">
-                    So ambassadors visit by habit, quiet partners go unnoticed, and the budget can't follow results.
+                    So ambassadors visit by habit, quiet partners go unnoticed, and the budget can&apos;t follow results.
                   </Callout>
                 </div>
               ) : barView === "chart" ? (
@@ -154,7 +153,7 @@ export default function ImpactDashboard() {
             <PanelHeader title="Weekly referrals and families reaching intake" description={state ? "Weekly trend is shown for both states combined." : "Last 12 weeks, both states."} actions={today ? null : <ViewToggle value={trendView} onChange={setTrendView} />} />
             <PanelBody>
               {today ? (
-                <p className="py-8 text-center text-sm text-ink-3">Not measured today. Intake outcomes aren't linked back to referrals.</p>
+                <p className="py-8 text-center text-sm text-ink-3">Not measured today. Intake outcomes aren&apos;t linked back to referrals.</p>
               ) : trendView === "chart" ? (
                 <div className="space-y-2">
                   <Legend items={[{ label: "Referred", color: SERIES.a }, { label: "Reached intake", color: SERIES.b }]} />

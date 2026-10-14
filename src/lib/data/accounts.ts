@@ -2,10 +2,23 @@
 // so nothing can ever reach a real inbox. Shared demo password: see README (never shown in the app except
 // on the Demo accounts card on the sign-in page).
 import type { AccountState, ActivityItem, Credential, DB, NotifType, Notification, OutboxMessage, User } from "@/lib/domain/types";
-import { hashPassword } from "@/lib/auth/crypto";
 import { statusLink } from "@/lib/rules/status-link";
 
-export const DEMO_PASSWORD = "Brighter2026!";
+// Salted SHA-256 of the shared demo password (shown only on the sign-in Demo accounts card and in the README).
+// The password itself is not stored in the app data. Regenerate with: sha256(`${salt}:${password}`).
+const DEMO_HASH: Record<string, string> = {
+  "u-maria": "862359a88eb10f9a720717ccb2f53e190a72cb2f703496039a58d007c6121b56",
+  "u-jon": "218fbbb286e5263a4f5b91a8f4524df1d3eb97f38a86c414a2ecf81a4e7647e0",
+  "u-lena": "fa3e9bd016c782be4e7b1700b2d018c39cb4da0cf75ec519014c69283851724b",
+  "u-dana": "3a4ece0d612ce2ad6f7dae8b4c27d265df727bcf1bff96d8cc8f04c0654ca824",
+  "u-ray": "143ec60817c2c2767b52e0eb26f50ada35d0712ce93cbe5ec8f994771084bf07",
+  "u-priya": "a01562b175f99916b3721f465f4f7eecb4e952f0be84e5b5f109a8fda4805b7e",
+  "u-alex": "529d23e84cef156f0c1d1f8fe4bd7b272478567974dec7431ae875ae018a4550",
+  "u-sam": "d4d12fc5e5ff245832d72a163e26976b7b46d0c7f98ed6b82d989873818cbdff",
+  "u-chris": "83a4b9945cc8d25199928cc77a39f3187abb35b75838675e439acfd9f2f6b0a4",
+  "u-jordan": "3dd658e2857cfecd8075efd72d47199c80eab36aab48be127308f5de0fd1b064",
+  "u-judge": "671d820123fb1695688cb6dd2cc4e601cac821044b9a2891075f53cd6c330bef",
+};
 
 const H = 3_600_000;
 const D = 24 * H;
@@ -49,7 +62,7 @@ export function seedAccounts(now: number): Pick<DB, "credentials" | "accounts"> 
   const accounts: Record<string, AccountState> = {};
   ACCOUNTS.forEach((u, i) => {
     const salt = `cv3-${u.id}-${(i * 7919 + 104729).toString(36)}`;
-    credentials[u.id] = { userId: u.id, salt, hash: hashPassword(salt, DEMO_PASSWORD), failed: 0, lockedUntil: null, changedAt: now - (40 + i * 3) * D };
+    credentials[u.id] = { userId: u.id, salt, hash: DEMO_HASH[u.id], failed: 0, lockedUntil: null, changedAt: now - (40 + i * 3) * D };
     const last = now - (14 + i * 2.5) * H; // "Last signed in yesterday / 2 days ago", never "never" (FT-013)
     accounts[u.id] = {
       ...blankAccount(),

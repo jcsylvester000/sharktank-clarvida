@@ -14,6 +14,8 @@ export interface MapMarker extends LatLng {
   /** Short glyph or letters inside the pin. */
   glyph?: string;
   color: string;
+  /** Glyph colour; dark ink on the light blues so the letters stay readable. */
+  text?: string;
   ring?: string;
   shape?: "pin" | "office" | "visit" | "dot";
   selected?: boolean;
@@ -22,7 +24,7 @@ export interface MapMarker extends LatLng {
 }
 export interface MapCircle extends LatLng { id: string; radiusMi: number; color: string; dashed?: boolean; fill?: number; label?: string }
 export interface MapLine { id: string; points: LatLng[]; color: string; dashed?: boolean }
-export interface MapBubble extends LatLng { id: string; radiusMi: number; color: string; opacity: number; label: string }
+export interface MapBubble extends LatLng { id: string; radiusMi: number; color: string; opacity: number; label: string; pulse?: boolean }
 
 export interface LeafletMapProps {
   center: LatLng;
@@ -50,7 +52,7 @@ function iconFor(m: MapMarker): L.DivIcon {
   const num = m.order ? `<span class="cv-pin-order">${m.order}</span>` : "";
   return L.divIcon({
     className: "cv-pin-wrap",
-    html: `<span class="cv-pin${sel}" style="--c:${m.color};--r:${m.ring ?? "#fff"}"><span class="cv-pin-glyph">${m.glyph ?? ""}</span></span>${num}`,
+    html: `<span class="cv-pin${sel}" style="--c:${m.color};--r:${m.ring ?? "#fff"};--t:${m.text ?? "#fff"}"><span class="cv-pin-glyph">${m.glyph ?? ""}</span></span>${num}`,
     iconSize: [30, 38],
     iconAnchor: [15, 36],
   });
@@ -66,27 +68,43 @@ export default function LeafletMap({ center, zoom = 11, markers = [], circles = 
 
   useEffect(() => {
     if (!el.current || map.current) return;
-    const m = L.map(el.current, { center: [center.lat, center.lng], zoom, zoomControl: true, scrollWheelZoom: true, attributionControl: true });
+    const m = L.map(el.current, { center: [center.lat, center.lng], zoom, maxZoom: 18, minZoom: 3, zoomControl: true, scrollWheelZoom: true, attributionControl: true });
     const tiles = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 18,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
       className: "cv-tiles",
-    }).addTo(m);
+    });
+    // Offline (Wi-Fi off on stage): request no tiles at all, so the demo makes zero external requests (AC-NF-03);
+    // markers, rings and routes still draw over a plain background and the offline notice explains why.
+    const online = () => { if (!m.hasLayer(tiles)) tiles.addTo(m); };
+    const offline = () => { if (m.hasLayer(tiles)) m.removeLayer(tiles); setTilesFailed(true); };
+    if (typeof navigator !== "undefined" && navigator.onLine === false) offline(); else tiles.addTo(m);
+    window.addEventListener("online", online);
+    window.addEventListener("offline", offline);
     let errors = 0;
     tiles.on("tileerror", () => { errors += 1; if (errors > 3) setTilesFailed(true); });
     tiles.on("tileload", () => setTilesFailed(false));
     m.attributionControl.setPrefix(false);
-    const cluster = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 38, spiderfyOnMaxZoom: true, iconCreateFunction: (c) => L.divIcon({ className: "cv-cluster-wrap", html: `<span class="cv-cluster">${c.getChildCount()}</span>`, iconSize: [36, 36] }) });
+    const cluster = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 56, spiderfyOnMaxZoom: true, iconCreateFunction: (c) => L.divIcon({ className: "cv-cluster-wrap", html: `<span class="cv-cluster">${c.getChildCount()}</span>`, iconSize: [36, 36] }) });
     const shapes = L.layerGroup().addTo(m);
     const plain = L.layerGroup().addTo(m);
     cluster.addTo(m);
     layers.current = { cluster, plain, shapes };
     map.current = m;
     // Leaflet measures its container on mount; re-measure after layout settles.
-    setTimeout(() => m.invalidateSize(), 50);
-    const ro = new ResizeObserver(() => m.invalidateSize());
+    let alive = true;
+    const resize = () => { if (alive) m.invalidateSize({ animate: false }); };
+    const settle = setTimeout(resize, 50);
+    const ro = new ResizeObserver(resize);
     ro.observe(el.current);
-    return () => { ro.disconnect(); m.remove(); map.current = null; layers.current = null; };
+    return () => {
+      // Leaving the page mid-animation (guided demo Next) must not leave timers poking a removed map.
+      alive = false;
+      clearTimeout(settle);
+      window.removeEventListener("online", online); window.removeEventListener("offline", offline); ro.disconnect();
+      m.stop(); cluster.clearLayers(); m.off(); m.remove();
+      map.current = null; layers.current = null;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -98,7 +116,7 @@ export default function LeafletMap({ center, zoom = 11, markers = [], circles = 
     ls.plain.clearLayers();
     ls.shapes.clearLayers();
     for (const b of bubbles) {
-      L.circle([b.lat, b.lng], { radius: b.radiusMi * MILE, color: b.color, weight: 1.5, fillColor: b.color, fillOpacity: b.opacity, interactive: true })
+      L.circle([b.lat, b.lng], { radius: b.radiusMi * MILE, color: b.color, weight: 1.5, fillColor: b.color, fillOpacity: b.opacity, interactive: true, className: b.pulse ? "cv-pulse" : undefined })
         .bindTooltip(b.label, { direction: "top", className: "cv-tip" })
         .addTo(ls.shapes);
     }
@@ -114,7 +132,9 @@ export default function LeafletMap({ center, zoom = 11, markers = [], circles = 
       L.polyline(ln.points.map((p) => [p.lat, p.lng] as [number, number]), { color: ln.color, weight: 4, opacity: 0.9, dashArray: ln.dashed ? "8 8" : undefined }).addTo(ls.shapes);
     }
     for (const mk of markers) {
-      const marker = L.marker([mk.lat, mk.lng], { icon: iconFor(mk), title: mk.label, keyboard: true, riseOnHover: true, zIndexOffset: mk.selected ? 1000 : mk.shape === "office" ? 500 : 0 });
+      // Visit ticks are decoration (details live in the Visits list), so they are not separate tap targets (WCAG 2.5.8).
+      const decorative = mk.shape === "visit";
+      const marker = L.marker([mk.lat, mk.lng], { icon: iconFor(mk), title: decorative ? undefined : mk.label, alt: decorative ? "" : mk.label, interactive: !decorative, keyboard: !decorative, riseOnHover: true, zIndexOffset: mk.selected ? 1000 : mk.shape === "office" ? 500 : 0 });
       marker.bindTooltip(mk.label, { direction: "top", offset: [0, -30], className: "cv-tip" });
       marker.on("click", () => clickRef.current?.(mk.id));
       marker.on("keypress", (e: L.LeafletKeyboardEvent) => { if (e.originalEvent.key === "Enter") clickRef.current?.(mk.id); });
@@ -135,7 +155,7 @@ export default function LeafletMap({ center, zoom = 11, markers = [], circles = 
     <div className={className} style={{ position: "relative" }}>
       <div ref={el} role="application" aria-label={ariaLabel} className="h-full w-full" />
       {tilesFailed ? (
-        <p role="status" className="absolute left-3 top-3 z-[500] max-w-xs rounded-xl bg-surface/95 px-3 py-2 text-xs text-ink-2 shadow">
+        <p role="status" className="absolute left-14 top-3 z-[500] max-w-xs rounded-xl bg-surface/95 px-3 py-2 text-xs text-ink-2 shadow">
           Street map needs an internet connection. Organizations, offices and rings still show on their real positions.
         </p>
       ) : null}

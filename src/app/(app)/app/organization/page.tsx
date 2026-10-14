@@ -3,7 +3,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { MapPin, Map as MapIcon, NotebookPen, Car } from "lucide-react";
+import { CircleDashed, MapPin, Map as MapIcon, NotebookPen, Car } from "lucide-react";
 import { ArrowLeft, Bot, CheckCircle2, CircleAlert, CircleCheck, CirclePause, FlaskConical, Mail, Plus, RotateCcw, Sparkles, TriangleAlert, UserRoundCog } from "lucide-react";
 import { useStore } from "@/lib/store/db";
 import { useCurrentUser, useNow } from "@/lib/store/hooks";
@@ -18,7 +18,7 @@ import { phiScan } from "@/lib/rules/phi";
 import { driveMinutes } from "@/lib/geo";
 import { CheckInDialog } from "@/components/map/check-in-dialog";
 import { uid } from "@/lib/store/db";
-import { PHI_TEST_STRINGS } from "@/lib/data/seed";
+
 import { fmtDate, ago, daysSince } from "@/lib/format";
 import type { Organization } from "@/lib/domain/types";
 import { StageChip } from "@/components/domain/chips";
@@ -225,7 +225,6 @@ function OutreachTab({ org }: { org: Organization }) {
   const [blockNotice, setBlockNotice] = useState<string | null>(null);
   const blockedLogged = useRef(false);
   const paused = isPaused(program);
-  const presenter = db.demo.presenter;
   const canEdit = accessForUser(pageById("PG-09"), me) === "full";
 
   useEffect(() => { if (state === "done" && draft) setBody(draft.body); }, [state, draft]);
@@ -351,7 +350,7 @@ function OutreachTab({ org }: { org: Organization }) {
             <ul className="space-y-2.5">
               {checks.map((c) => (
                 <li key={c.id} className="flex gap-2.5 text-sm">
-                  {c.pass ? <CircleCheck size={17} className="mt-0.5 shrink-0 text-ok" /> : c.warnOnly ? <CircleAlert size={17} className="mt-0.5 shrink-0 text-warn" /> : <TriangleAlert size={17} className="mt-0.5 shrink-0 text-crit" />}
+                  {c.pass ? <CircleCheck size={17} className="mt-0.5 shrink-0 text-ok" /> : c.id === "footer" && !body.trim() ? <CircleDashed size={17} className="mt-0.5 shrink-0 text-ink-3" /> : c.warnOnly ? <CircleAlert size={17} className="mt-0.5 shrink-0 text-warn" /> : <TriangleAlert size={17} className="mt-0.5 shrink-0 text-crit" />}
                   <span>
                     <span className="font-medium">{c.label}</span>
                     <span className="block text-xs text-ink-2">{c.detail}</span>

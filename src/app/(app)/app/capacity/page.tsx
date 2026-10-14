@@ -63,7 +63,7 @@ export default function CapacityBoard() {
                 </TD>
                 <TD>{p.office}, {p.state}</TD>
                 <TD>
-                  <CapacityChip capacity={p.capacity} stale={now - p.capacityUpdatedAt > 7 * D} />
+                  <CapacityChip capacity={p.capacity} staleDays={Math.floor((now - p.capacityUpdatedAt) / D)} />
                   {isPaused(p) ? <span className="mt-1 block text-xs font-semibold text-warn">Outreach paused</span> : null}
                 </TD>
                 <TD className="max-w-[16rem] text-ink-2">{p.capacityNote || "—"}</TD>

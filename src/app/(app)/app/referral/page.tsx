@@ -300,7 +300,7 @@ function Detail() {
                   ))}
                 </ul>
               </XField>
-              <Link href={statusLink(r.id)} target="_blank" className="link mt-3 inline-block text-sm font-medium">Open the referrer's status page</Link>
+              <Link href={statusLink(r.id)} target="_blank" className="link mt-3 inline-block text-sm font-medium">Open the referrer&apos;s status page</Link>
             </PanelBody>
           </Panel>
         </div>

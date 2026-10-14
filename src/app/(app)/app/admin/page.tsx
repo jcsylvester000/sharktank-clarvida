@@ -49,7 +49,7 @@ function Admin() {
       {waiting.length ? (
         <Callout tone="warn" className="mb-5" icon={<GitPullRequestArrow size={18} className="text-warn" />} title={`${waiting.length} ${waiting.length === 1 ? "change is" : "changes are"} waiting for a second approver`}
           action={<Button size="sm" variant="secondary" onClick={() => setTab("routing")}>Review</Button>}>
-          The person who proposed a change can't approve it.
+          The person who proposed a change can&apos;t approve it.
         </Callout>
       ) : null}
       <Tabs value={tab} onValueChange={setTab}>

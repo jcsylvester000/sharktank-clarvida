@@ -17,6 +17,7 @@ const METRICS = [
 
 const PROOF = [
   ["54,000", "clients a year"],
+  ["4,600", "employees"],
   ["16", "states"],
   ["94%", "client satisfaction"],
   ["180,000", "clients a year: the 2030 goal"],
@@ -56,7 +57,6 @@ export default function Story() {
             <span aria-hidden className="absolute -bottom-8 -left-8 h-36 w-36 rounded-tr-[144px] bg-cv-skylight/70" />
             <picture>
               <source srcSet="/brand/hero-family.webp" type="image/webp" />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/brand/hero-family.jpg" alt="A smiling family together (Clarvida brand photography)" width={610} height={410} className="relative w-full rounded-[var(--radius-panel)] object-cover" fetchPriority="high" />
             </picture>
           </div>
@@ -68,7 +68,7 @@ export default function Story() {
               <span className="text-lg font-semibold">Today</span>
               <span className="text-xs text-ink-3">Refer a Client form, as observed on the public site (Oct 2026)</span>
             </figcaption>
-            <div className="space-y-3 opacity-80">
+            <div className="space-y-3">
               {["Name", "Email", "Message"].map((f) => (
                 <div key={f}>
                   <p className="text-sm text-ink-2">{f}</p>
@@ -79,7 +79,7 @@ export default function Story() {
             </div>
           </figure>
 
-          <figure className={cn("rounded-[28px] border-2 bg-surface p-6 transition-all", shown ? "border-teal shadow-lg" : "border-line opacity-60")}>
+          <figure className={cn("rounded-[28px] border-2 bg-surface p-6 transition-all", shown ? "border-teal shadow-lg" : "border-dashed border-line")}>
             <figcaption className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
               <span className="text-lg font-semibold text-cv-teal">With the Co-Pilot</span>
               <span className="inline-flex items-center gap-1 text-xs text-ink-3"><ShieldCheck size={13} /> No trackers on the form</span>
@@ -108,7 +108,7 @@ export default function Story() {
           {METRICS.map((m) => (
             <div key={m.label} className="rounded-2xl border border-line bg-surface px-5 py-4">
               <p className="text-sm text-ink-2">{m.label}</p>
-              <p className={cn("num mt-2 text-[1.8rem] leading-none transition-colors duration-500", shown ? "text-cv-teal" : "text-ink-3")}>{shown ? m.withCo : m.today}</p>
+              <p className={cn("num mt-2 text-[1.8rem] leading-none transition-colors duration-500", shown ? "text-cv-teal" : "text-ink-2")}>{shown ? m.withCo : m.today}</p>
               <p className="mt-1 text-xs text-ink-3">{shown ? `Today: ${m.today}` : "Today"}</p>
             </div>
           ))}
@@ -121,7 +121,7 @@ export default function Story() {
 
         <div className="mt-12 rounded-[var(--radius-panel)] bg-cv-ice px-6 py-6 sm:px-9">
           <p className="text-sm font-semibold text-teal-strong">Why it matters to Clarvida</p>
-          <div className="mt-3 grid gap-4 sm:grid-cols-4">
+          <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-5">
             {PROOF.map(([n, l]) => (
               <div key={l}><p className="num text-[1.9rem] leading-none text-cv-teal">{n}</p><p className="mt-1 text-sm text-ink-2">{l}</p></div>
             ))}

@@ -167,7 +167,7 @@ export default function PartnerDirectory() {
           </Table>
         )}
       </div>
-      <p className="mt-3 text-xs text-ink-3">Organization data only (classes C0 and C2). No referral or client details appear in the directory.</p>
+      <p className="mt-3 text-xs text-ink-3">Organization data only: public information and business contacts. No referral or client details appear in the directory.</p>
     </div>
   );
 }

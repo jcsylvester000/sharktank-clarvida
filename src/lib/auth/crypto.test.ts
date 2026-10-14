@@ -4,7 +4,7 @@ import { sha256, mfaCode, verifyMfa, MFA_STEP_MS } from "./crypto";
 
 describe("crypto", () => {
   it("matches Node's SHA-256", () => {
-    for (const s of ["", "abc", "Brighter2026!", "x".repeat(200), "ñandú – é"]) {
+    for (const s of ["", "abc", "Sample-Pass1!", "x".repeat(200), "ñandú – é"]) {
       expect(sha256(s)).toBe(createHash("sha256").update(s, "utf8").digest("hex"));
     }
   });

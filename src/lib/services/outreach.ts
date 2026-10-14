@@ -148,7 +148,7 @@ export function setCapacity(d: Draft<DB>, programId: string, capacity: Capacity,
 
 export function kitCodeFor(orgName: string, state: string, existing: string[], year = new Date().getFullYear()): string {
   const words = orgName.replace(/[(),.]/g, " ").split(/\s+/).filter((w) => /^[A-Z]/.test(w) && !["And", "The", "Of"].includes(w));
-  let base = words.slice(0, 3).map((w) => w[0]).join("").toUpperCase() || "ORG";
+  const base = words.slice(0, 3).map((w) => w[0]).join("").toUpperCase() || "ORG";
   let code = `${base}-${state}-${year}`;
   let n = 2;
   while (existing.includes(code)) { code = `${base}${n}-${state}-${year}`; n++; }

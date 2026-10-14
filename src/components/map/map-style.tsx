@@ -1,13 +1,13 @@
 import type { OrgType, Stage } from "@/lib/domain/types";
 
 /** Pins in the Clarvida blue ramp by stage; amber marks the selected item and relationships that need attention. */
-export const STAGE_PIN: Record<Stage, { fill: string; ring: string; label: string }> = {
-  Active: { fill: "#075e7e", ring: "#ffffff", label: "Active" },
-  Engaged: { fill: "#1d7fa3", ring: "#ffffff", label: "Engaged" },
-  New: { fill: "#5dc7ee", ring: "#ffffff", label: "New" },
-  Quiet: { fill: "#28a8e0", ring: "#ffb81c", label: "Quiet (amber ring)" },
-  "At risk": { fill: "#03374a", ring: "#ffb81c", label: "At risk (amber ring)" },
-  Dormant: { fill: "#7a8a91", ring: "#ffffff", label: "Dormant" },
+export const STAGE_PIN: Record<Stage, { fill: string; ring: string; label: string; text: string }> = {
+  Active: { fill: "#075e7e", ring: "#ffffff", label: "Active", text: "#ffffff" },
+  Engaged: { fill: "#1d7fa3", ring: "#ffffff", label: "Engaged", text: "#ffffff" },
+  New: { fill: "#5dc7ee", ring: "#ffffff", label: "New", text: "#03374a" },
+  Quiet: { fill: "#28a8e0", ring: "#ffb81c", label: "Quiet (amber ring)", text: "#03374a" },
+  "At risk": { fill: "#03374a", ring: "#ffb81c", label: "At risk (amber ring)", text: "#ffffff" },
+  Dormant: { fill: "#5d6c73", ring: "#ffffff", label: "Dormant", text: "#ffffff" },
 };
 
 export const TYPE_GLYPH: Record<OrgType, string> = {
@@ -29,6 +29,7 @@ export function Legend({ layers }: { layers: { orgs: boolean; offices: boolean; 
         </div>
       ) : null}
       <div className="flex flex-wrap gap-x-3 gap-y-1">
+        {/* eslint-disable-next-line @next/next/no-img-element -- static export, decorative 14 px logo symbol */}
         {layers.offices ? <span className="inline-flex items-center gap-1.5"><img src="/brand/logo-symbol.png" alt="" className="h-3.5 w-3.5" />Clarvida office</span> : null}
         {layers.visits ? <span className="inline-flex items-center gap-1.5"><span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-cv-navy text-[9px] text-white">✓</span>Visit this month</span> : null}
         {layers.heat ? <span className="inline-flex items-center gap-1.5"><span className="inline-block h-3 w-3 rounded-full bg-cv-logo/50" />Referrals by county (counts under 11 hidden)</span> : null}

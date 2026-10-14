@@ -9,7 +9,6 @@ import { useCurrentUser } from "@/lib/store/hooks";
 import { switchMode } from "@/lib/mode";
 import { isSimUser } from "@/lib/live/seed";
 import { ROLE_LABEL, href, landingFor } from "@/lib/access";
-import { DEMO_PASSWORD } from "@/lib/data/accounts";
 import { auth } from "@/mock-api";
 import { AuthFrame } from "@/components/auth/auth-frame";
 import { useGuide } from "@/components/shell/guide-bar";
@@ -20,6 +19,9 @@ import { Input, Label, FieldError } from "@/components/ui/field";
 import { Avatar, LogoSymbol } from "@/components/brand/brand";
 import { cn } from "@/components/ui/cn";
 import type { User } from "@/lib/domain/types";
+
+/** Demo accounts card (PG-01): the one place in the app the shared demo password appears. */
+const DEMO_PASSWORD = "Brighter2026!";
 
 function SignIn() {
   const router = useRouter();
