@@ -1,0 +1,13 @@
+{
+  "name": "clarvida-copilot-qa",
+  "private": true,
+  "description": "Release QA for the prototype: 13-step guided demo, accessibility (WCAG 2.2 AA), privacy and offline checks. Kept separate so the app install stays small.",
+  "scripts": {
+    "qa": "node run-all.js"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.10.2",
+    "playwright": "1.56.1",
+    "serve-handler": "6.1.6"
+  }
+}

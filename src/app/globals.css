@@ -1,0 +1,165 @@
+@import "tailwindcss";
+
+/* Clarvida brand tokens (Brand Market Kit, Oct 14 2026, sections 4 and 10). Brand colours live here only.
+   Legacy token names from v2 (teal, care, ink…) are kept so every screen picks up the brand in one place. */
+@theme {
+  --font-display: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Brand palette (AC-BR-01) */
+  --color-cv-teal: #1d7fa3;
+  --color-cv-blue: #119ed4; /* headings 24 px and larger only */
+  --color-cv-logo: #28a8e0;
+  --color-cv-sky: #5dc7ee;
+  --color-cv-lightsky: #97d7f6;
+  --color-cv-navy: #03374a;
+  --color-cv-link: #107093;
+  --color-cv-deep: #075e7e;
+  --color-cv-amber: #ffb81c;
+  --color-cv-sun: #f6e81e;
+  --color-cv-softsun: #fcf477;
+  --color-cv-ice: #ebfaff;
+  --color-cv-skylight: #98daf8;
+  --color-cv-charcoal: #343a3d;
+  --color-cv-ink: #1f2124;
+
+  /* Surfaces and text */
+  --color-canvas: #f6fbfd;
+  --color-surface: #ffffff;
+  --color-sunken: #eaf5f9;
+  --color-ink: #1f2124;
+  --color-ink-2: #343a3d;
+  --color-ink-3: #56636a; /* 4.5:1+ on white, canvas and sunken (WCAG 1.4.3) */
+  --color-line: #d3e4eb;
+  --color-line-2: #e5f0f4;
+
+  /* Outreach Zone (no client data): Clarvida Teal */
+  --color-teal: #1d7fa3;
+  --color-teal-strong: #075e7e;
+  --color-teal-tint: #ebfaff;
+  /* Care Zone (client data): Deep Navy */
+  --color-care: #03374a;
+  --color-care-strong: #022735;
+  --color-care-tint: #e1eef3;
+
+  /* Calm status palette: no red/green status chips (AC-BR-05). Errors keep a muted red for accessibility. */
+  --color-ok: #075e7e;
+  --color-ok-tint: #dff3fa;
+  --color-warn: #7a4f00;
+  --color-warn-tint: #fff4d6;
+  --color-crit: #a2332a;
+  --color-crit-tint: #fbe9e6;
+  --color-hl: #ffb81c; /* amber: one primary action per screen; breach warnings */
+  --color-hl-tint: #fff4d6;
+
+  /* Chart series: blue ramp (AC-BR-06) */
+  --color-s1: #1d7fa3;
+  --color-s2: #5dc7ee;
+  --color-s3: #97d7f6;
+  --color-s4: #28a8e0;
+  --color-grid: #e3eef2;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px; /* cards */
+  --radius-xl: 24px;
+  --radius-panel: 40px; /* large panels */
+}
+
+@layer base {
+  /* Grid and flex children may shrink below their content, so wide tables scroll inside their card instead of widening the page on phones. */
+  :where(.grid) > * {
+    min-width: 0;
+  }
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  html.presenter {
+    font-size: 18px;
+  }
+  body {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 1rem; /* 16 px body (AC-BR-02) */
+    line-height: 1.5;
+  }
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 500; /* Montserrat headlines at 500, sentence case, never all caps */
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    color: var(--color-ink);
+  }
+  a {
+    color: inherit;
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-cv-link);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--color-cv-skylight);
+  }
+}
+
+@layer components {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  .num {
+    font-weight: 700; /* numbers at 700 */
+    font-variant-numeric: tabular-nums;
+  }
+  .guide-highlight {
+    outline: 3px solid var(--color-hl);
+    outline-offset: 4px;
+    border-radius: var(--radius-md);
+    animation: guide-pulse 1.6s ease-in-out 2;
+  }
+  @keyframes guide-pulse {
+    0%, 100% { outline-color: var(--color-hl); }
+    50% { outline-color: color-mix(in srgb, var(--color-hl) 35%, transparent); }
+  }
+  .arrive {
+    animation: arrive 10s ease-out 1;
+  }
+  @keyframes arrive {
+    0% { background: var(--color-hl-tint); }
+    80% { background: var(--color-hl-tint); }
+    100% { background: transparent; }
+  }
+  .skeleton {
+    background: linear-gradient(90deg, var(--color-sunken) 0%, #f4fafc 50%, var(--color-sunken) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.2s ease-in-out infinite;
+    border-radius: var(--radius-sm);
+  }
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  .link {
+    color: var(--color-cv-link);
+    text-underline-offset: 3px;
+  }
+  .link:hover {
+    color: var(--color-cv-deep);
+    text-decoration: underline;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: white; }
+}
