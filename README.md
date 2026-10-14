@@ -81,6 +81,7 @@ node server.js ../out 4310 &   # serve the build
 node b1-accounts.js            # Batch 1: accounts, sign-in, MFA, welcome, dashboards, lockout, reset, access
 node b2-care.js                # Batch 2: partner form → intake → referral → status, consent, X-ray, redirect, escalation
 node b3-outreach.js            # Batch 3: Map Explorer, finder map, brief/draft/PHI/approve, nurture, content, scope
+node b4-insights.js            # Batch 4: story, 13-step guided demo, presenter window, impact Ask/X-ray, pilot, admin approvals, audit
 ```
 
 ## Build status
@@ -90,5 +91,5 @@ node b3-outreach.js            # Batch 3: Map Explorer, finder map, brief/draft/
 | B1 | Foundation: brand system, 11 accounts, sign-in, SSO chooser, MFA + Demo Authenticator, remembered devices, lockout, password reset, welcome, role dashboards, mock API, notifications, Demo Inbox, settings, partner hub, reset | Done (Oct 14) |
 | B2 | Care loop: branded partner form (specific errors, nearest office, sample fill), reference-only confirmation, signed status links, live handoff, intake queue with next best call, brand response clock, referral detail, warm redirect, escalation + reassign, referrer notices and team activity | Done (Oct 14) |
 | B3 | Outreach and maps: OpenStreetMap Map Explorer (POIs by stage, clustering, 5/10/25-mile rings, drive times, route planner, location check-in, referral heat, coverage gaps, need vs capacity), finder with map, organization (log visit/call, check-in, approvals in Demo Inbox), Nurture Journeys with warm handoff, Content and Webinar Ideas | Done (Oct 14) |
-| B4 | Insights, governance and presentation | Next |
-| B5 | QA against the Acceptance Criteria workbook and freeze | |
+| B4 | Insights, governance and presentation: Before/After story, 13-step guided demo with account switching, presenter window (timer, 3-minute cut, fallbacks), Impact Dashboard (Privacy X-ray, source-to-intake flow, Ask refusal), Impact and Pilot (ROI sliders the judge can move, scorecard, the ask, readiness gates, sources), Trust and Security (what is simulated), two-person approval with notifications | Done (Oct 14) |
+| B5 | QA against the Acceptance Criteria workbook and freeze | Next |

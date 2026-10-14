@@ -46,7 +46,7 @@ const CONTROLS: Control[] = [
   { id: "SEC-04", control: "Role-based access, least privilege, automatic sign-out", basis: "45 CFR 164.312(a)", demo: "Switch persona: pages lock by role; idle sign-out", prod: "SSO roles, row-level security, emergency access", see: { label: "Intake Queue", route: "/app/intake" } },
   { id: "SEC-05", control: "Append-only audit trail, reviewed regularly", basis: "45 CFR 164.312(b), 164.316", demo: "Every action in this demo is logged", prod: "Immutable store, six-year retention", see: { label: "Audit Log", route: "/app/audit" } },
   { id: "SEC-06", control: "Integrity: validation and recoverable data", basis: "45 CFR 164.312(c)", demo: "Form validation; reset restores a known state", prod: "Checksums, point-in-time recovery" },
-  { id: "SEC-07", control: "Single sign-on with MFA; signed expiring links for referrers", basis: "45 CFR 164.312(d)", demo: "Simulated sign-in; status link by reference", prod: "Clarvida SSO with MFA", see: { label: "Sign-in", route: "/sign-in" } },
+  { id: "SEC-07", control: "Single sign-on with MFA; signed expiring links for referrers", basis: "45 CFR 164.312(d)", demo: "Simulated sign-in; status link by reference", prod: "Clarvida SSO with MFA", see: { label: "Sign-in", route: "/app/settings" } },
   { id: "SEC-08", control: "Encryption in transit and at rest, plus field-level encryption", basis: "45 CFR 164.312(a)(2)(iv), (e)", demo: "Masked phone until revealed (logged)", prod: "TLS 1.2+, AWS KMS, encrypted fields" },
   { id: "SEC-09", control: "42 CFR Part 2 handling for substance use referrals", basis: "42 CFR Part 2", demo: "Part 2 program locks Tier 2 detail", prod: "Flag, consent and breach handling", see: { label: "Consent simulator", route: "/app/referral", query: { id: "REF-NC-24813", panel: "consent" } } },
   { id: "SEC-10", control: "Minimum necessary: each role sees only the fields it needs", basis: "45 CFR 164.502(b)", demo: "Privacy X-ray shows who sees each field", prod: "Field-level views per role", see: { label: "Privacy X-ray", route: "/app/referral", query: { id: "REF-NC-24811", xray: "1" } } },
@@ -65,6 +65,7 @@ export default function TrustSecurity() {
   const router = useRouter();
   const latest = db.demo.lastPartnerRef ?? [...db.referrals].sort((a, b) => b.receivedAt - a.receivedAt)[0]?.id;
   const canOpenReferral = accessForUser(pageById("PG-15"), me) !== "none";
+  const explain = db.demo.showBrdTags;
 
   const showXray = () => {
     router.push(href("/app/referral", { id: latest, xray: "1" }));
@@ -73,14 +74,14 @@ export default function TrustSecurity() {
   return (
     <div>
       <PageHeader
-        title="Trust & Security"
+        title="Trust and Security"
         description="How client information is protected, in plain terms. Most controls below can be seen working in this prototype."
         meta={<Badge tone="outline" className="whitespace-normal">Not legal advice. Final controls are approved by Clarvida Compliance, Legal and Information Security.</Badge>}
         actions={
           canOpenReferral ? (
             <Button variant="care" onClick={showXray}><Eye size={15} /> Show Privacy X-ray on a live referral</Button>
           ) : (
-            <Tip content="Referrals open for intake and compliance roles only. Switch persona to Sam (Compliance) to see it."><span><Button variant="secondary" disabled><Eye size={15} /> Show Privacy X-ray on a live referral</Button></span></Tip>
+            <Tip content="Referrals open for intake and compliance roles only. Switch account to Sam (Compliance) to see it."><span><Button variant="secondary" disabled><Eye size={15} /> Show Privacy X-ray on a live referral</Button></span></Tip>
           )
         }
       />
@@ -103,6 +104,24 @@ export default function TrustSecurity() {
             <div className="flex items-center gap-2.5 rounded-md bg-canvas px-3 py-2.5 text-sm"><KeyRound size={16} className="shrink-0 text-ink-2" /><span><span className="font-medium">Identity across both:</span> Clarvida single sign-on with MFA, roles and state scope.</span></div>
             <div className="flex items-center gap-2.5 rounded-md bg-canvas px-3 py-2.5 text-sm"><ScrollText size={16} className="shrink-0 text-ink-2" /><span><span className="font-medium">Audit across both:</span> every view, change, export and block, with no client values.</span></div>
           </div>
+        </PanelBody>
+      </Panel>
+
+      <Panel className="mb-5 border-cv-amber/60" data-guide="simulated">
+        <PanelHeader title="What is simulated in this prototype" description="Realism comes from behaviour and polish, never from pretending data is real." />
+        <PanelBody className="grid gap-x-8 gap-y-2 text-sm md:grid-cols-2">
+          {[
+            ["Data", "Every person, referral, contact and number is synthetic. Organization names are illustrative public institutions."],
+            ["Accounts and sign-in", "Demo accounts with hashed passwords and a Demo Authenticator stand in for Clarvida SSO with MFA."],
+            ["Back end", "A pretend API inside the browser adds realistic delays; production uses Clarvida's AWS environment under its BAA."],
+            ["AI", "A simulated model fills approved templates from organization data. The PHI guard and logging are real rules."],
+            ["Email", "Nothing is sent. Every message appears in the Demo Inbox; partner email would go through the approved CRM."],
+            ["Maps", "Street maps are OpenStreetMap; organization positions and drive times are illustrative. Location is read once, only at a visit check-in, with permission. Client locations are never mapped."],
+            ["Live updates", "Two windows on one computer stay in sync; cross-device sync needs the production back end."],
+            ["Out of scope", "No AI voice calls or automated text messages to families, ever. Staff make every call."],
+          ].map(([k, v]) => (
+            <p key={k} className="border-b border-line-2 py-2"><span className="font-semibold text-ink">{k}: </span><span className="text-ink-2">{v}</span></p>
+          ))}
         </PanelBody>
       </Panel>
 
@@ -148,11 +167,11 @@ export default function TrustSecurity() {
         <PanelHeader title="Controls: prototype and production" description="Each requirement, its legal basis, what you can see here, and what production adds." actions={<Badge tone="ok" icon={<ShieldCheck size={12} />}>{CONTROLS.filter((c) => c.see).length} of {CONTROLS.length} visible in the demo</Badge>} />
         <PanelBody className="p-0">
           <Table>
-            <THead><tr><TH>ID</TH><TH>Control</TH><TH>Basis</TH><TH>In this prototype</TH><TH>In production</TH><TH /></tr></THead>
+            <THead><tr>{explain ? <TH>ID</TH> : null}<TH>Control</TH><TH>Basis</TH><TH>In this prototype</TH><TH>In production</TH><TH /></tr></THead>
             <tbody>
               {CONTROLS.map((c) => (
                 <TR key={c.id}>
-                  <TD className="whitespace-nowrap font-mono text-xs">{c.id}</TD>
+                  {explain ? <TD className="whitespace-nowrap font-mono text-xs">{c.id}</TD> : null}
                   <TD className="font-medium">{c.control}</TD>
                   <TD className="text-xs text-ink-2">{c.basis}</TD>
                   <TD className={`text-sm ${c.demo === "Not shown" ? "text-ink-3" : ""}`}>{c.demo}</TD>

@@ -1,7 +1,7 @@
 // Relationship events (C13), program catalog (C15) and administration (C23). Production: Laravel actions.
 import type { Draft } from "immer";
 import type { DB, PendingChange, RelationshipEvent } from "@/lib/domain/types";
-import { audit, currentUser, notify } from "./core";
+import { activity, audit, currentUser, notify } from "./core";
 import { uid } from "@/lib/store/db";
 import { now as clockNow } from "@/lib/clock";
 
@@ -42,8 +42,9 @@ export function publishEvent(d: Draft<DB>, id: string, summary: string, orgIds: 
     }
     people.add(o.ownerId);
   }
-  people.forEach((uidOwner) => notify(d, { toUserId: uidOwner, text: `Relationship reset: ${e.title}`, link: "/app/home/" }));
+  people.forEach((uidOwner) => notify(d, { toUserId: uidOwner, type: "event", text: `Relationship reset: ${e.title}`, link: "/app/" }));
   audit(d, { action: `Published relationship event (${orgIds.length} organizations, ${tasks} tasks)`, objectId: id, zone: "Outreach" });
+  if (me) activity(d, `${me.firstName ?? me.name} published a relationship event: ${e.title}`, { link: "/app/events/", states: [e.state] });
   return { tasks, people: people.size };
 }
 
@@ -77,7 +78,9 @@ export function proposeChange(d: Draft<DB>, c: Pick<PendingChange, "area" | "cha
   const id = uid("chg");
   d.pending.unshift({ id, ...c, proposedBy: me?.id ?? "", proposedAt: clockNow(), status: "Waiting for second approver" });
   audit(d, { action: `Proposed change (${c.area}): ${c.change}`, objectId: id, zone: "Both", category: "config" });
-  d.users.filter((u) => u.role === "admin" && u.id !== me?.id && u.active).forEach((u) => notify(d, { toUserId: u.id, text: `Change waiting for your approval: ${c.change}`, link: "/app/admin/?tab=routing" }));
+  // HO-09: administrators and the Ambassador Lead (second approver) are told.
+  d.users.filter((u) => (u.role === "admin" || u.role === "amb_lead") && u.id !== me?.id && u.active).forEach((u) => notify(d, { toUserId: u.id, type: "approval", text: `Change waiting for your approval: ${c.change}`, link: "/app/admin/?tab=routing" }));
+  if (me) activity(d, `${me.firstName ?? me.name} proposed a ${c.area.toLowerCase()} change (waiting for approval)`, { zone: "Both", link: "/app/admin/", states: ["ALL"] });
   return id;
 }
 
@@ -104,7 +107,8 @@ export function decideChange(d: Draft<DB>, id: string, approve: boolean): boolea
     if (sla) sla.targetHours = p.targetHours;
   }
   audit(d, { action: `${approve ? "Approved" : "Rejected"} change (${c.area}): ${c.change}`, objectId: id, zone: "Both", category: "config" });
-  notify(d, { toUserId: c.proposedBy, text: `Your change was ${approve ? "approved and applied" : "rejected"}: ${c.change}`, link: "/app/admin/?tab=routing" });
+  notify(d, { toUserId: c.proposedBy, type: "approval", text: `Your change was ${approve ? "approved and applied" : "rejected"} by ${me!.name}: ${c.change}`, link: "/app/admin/?tab=routing" });
+  activity(d, `${me!.firstName ?? me!.name} ${approve ? "approved" : "rejected"} a ${c.area.toLowerCase()} change`, { zone: "Both", link: "/app/admin/", states: ["ALL"] });
   return true;
 }
 

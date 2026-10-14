@@ -161,7 +161,7 @@ const ls = (p) => p.evaluate(() => JSON.parse(localStorage.getItem("cv-proto-v3"
 
   // Lena dashboard shows coverage gap alert and Maria's activity
   await signIn(p, "lena.ortiz@clarvida.example");
-  const lt = await p.textContent("main");
+  await p.waitForSelector("text=Recent team activity", { timeout: 6000 }).catch(() => {}); const lt = await p.textContent("main"); if (!/Coverage gap/.test(lt)) console.log("LT:", p.url(), lt.slice(0, 600));
   ok("FT-180 lead dashboard shows a coverage gap", /Coverage gap/.test(lt));
   ok("FT-044 Maria's actions in Lena's team activity", /Maria (checked in|approved an outreach|enrolled)/.test(lt), lt.match(/Recent team activity.{0,200}/)?.[0]);
 

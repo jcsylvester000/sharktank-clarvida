@@ -12,7 +12,9 @@ import { sourceHealth } from "@/lib/rules/outreach";
 import { href } from "@/lib/access";
 import { pct, plural } from "@/lib/format";
 import { downloadCsv } from "@/lib/csv";
-import { GroupedBars, Histogram, Legend, SERIES, TrendLines, ViewToggle } from "@/components/charts/charts";
+import { FlowChart, GroupedBars, Histogram, Legend, SERIES, Sparkline, TrendLines, ViewToggle } from "@/components/charts/charts";
+import { ScanEye } from "lucide-react";
+import { Switch } from "@/components/ui/overlays";
 import { AskPanel } from "@/components/insights/ask-panel";
 import { StageChip } from "@/components/domain/chips";
 import { Button } from "@/components/ui/button";
@@ -35,6 +37,8 @@ export default function ImpactDashboard() {
   const [st, setSt] = useState<StateFilter>(me.scope.includes("ALL") ? "ALL" : (me.scope[0] as StateFilter));
   const [barView, setBarView] = useState<"chart" | "table">("chart");
   const [trendView, setTrendView] = useState<"chart" | "table">("chart");
+  const [flowView, setFlowView] = useState<"chart" | "table">("chart");
+  const [xray, setXray] = useState(false);
   const state = st === "ALL" ? undefined : st;
 
   const f = useMemo(() => funnel(db, { state }), [db, state]);
@@ -69,16 +73,25 @@ export default function ImpactDashboard() {
       <div data-guide="impact" className="mb-5 space-y-4">
         <div className="flex flex-wrap items-center gap-3">
           <Segmented label="Compare" value={mode} onChange={setMode} options={[{ value: "today", label: "Today" }, { value: "with", label: "With the Co-Pilot" }]} />
+          <div className="rounded-full border border-line bg-surface px-3 py-1" data-guide="impact-xray"><Switch checked={xray} onCheckedChange={(v) => { setXray(v); if (v) mutate((d) => audit(d, { action: "Privacy X-ray turned on (Impact Dashboard)", zone: "Outreach" }), undefined, { allowReadOnly: true }); }} label={<span className="inline-flex items-center gap-1.5 text-sm font-medium"><ScanEye size={15} /> Privacy X-ray</span>} /></div>
           <p className="text-sm text-ink-2">{today ? "What marketing can see today: referrals arrive as a name, an email and a message." : "Every referral carries its source, so outcomes trace back to the relationship that produced them."}</p>
         </div>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           <Stat label="Referrals" value={f.totals.refs} sub="Last 90 days" />
-          <Stat label="With a known source" value={today ? "0%" : "100%"} tone={today ? "crit" : "ok"} sub={today ? "Not captured" : "Captured on every form"} />
+          <Stat label="With a known source" value={today ? "0%" : "100%"} tone={today ? "warn" : "teal"} sub={today ? "Not captured" : "Captured on every form"} />
           <Stat label="Reached intake" value={today ? "?" : pct(f.connectionRate)} tone={today ? undefined : "teal"} sub={today ? "Can't be traced to a source" : `${f.totals.completed} of ${f.totals.refs} families`} />
-          <Stat label="Median time to first contact" value={today ? "?" : `${sp.median.toFixed(1)} h`} sub={today ? "Not measured" : "Business hours. Target 8 h"} />
-          <Stat label="Partners gone quiet" value={today ? "?" : health.quiet + health.dormant} tone={today ? undefined : health.quiet + health.dormant ? "warn" : "ok"} sub={today ? "Noticed months later, if ever" : "On ambassador plans this week"} />
+          <Stat label="Median time to first contact" value={today ? "?" : `${sp.median.toFixed(1)} h`} sub={today ? "Not measured" : "Business hours. Target 8 h"} className={today ? undefined : "border-cv-amber bg-[#fffaf0] ring-1 ring-cv-amber/60"} />
+          <Stat label="Partners gone quiet" value={today ? "?" : health.quiet + health.dormant} tone={today ? undefined : health.quiet + health.dormant ? "warn" : "teal"} sub={today ? "Noticed months later, if ever" : "On ambassador plans this week"} />
         </div>
       </div>
+
+      {xray ? (
+        <div className="mb-5 grid gap-4 rounded-2xl border-2 border-dashed border-teal bg-surface p-5 md:grid-cols-3">
+          <div><p className="font-semibold">What this page is made of</p><p className="mt-1 text-sm text-ink-2">Counts and status codes only (data class C1, aggregate). Built from a de-identified attribution mart, refreshed nightly in production and instantly in this demo.</p></div>
+          <div><p className="font-semibold">What never reaches it</p><p className="mt-1 text-sm text-ink-2">Names, phone numbers, ages, coverage, notes and referral records stay in the Care Zone. Marketing sees one referral as &ldquo;+1 from a school&rdquo;.</p></div>
+          <div><p className="font-semibold">Small counts are hidden</p><p className="mt-1 text-sm text-ink-2">Any count from 1 to 10 shows as &ldquo;&lt;11&rdquo;, so no family can be identified. Exports follow the same rule and are logged.</p></div>
+        </div>
+      ) : null}
 
       <div className="grid gap-5 xl:grid-cols-3">
         <div className="space-y-5 xl:col-span-2">
@@ -156,6 +169,22 @@ export default function ImpactDashboard() {
             </PanelBody>
           </Panel>
 
+          {!today ? (
+            <Panel data-guide="flow">
+              <PanelHeader title="From source to intake" description="Where families come from, how many we reached, and how many reached intake. Counts under 11 show as <11." actions={<ViewToggle value={flowView} onChange={setFlowView} />} />
+              <PanelBody>
+                {flowView === "chart" ? (
+                  <FlowChart rows={f.rows.map((r) => ({ label: r.src, refs: r.refs, contacted: r.contacted, completed: r.completed }))} fmt={suppress} />
+                ) : (
+                  <Table>
+                    <THead><tr><TH>Source type</TH><TH className="text-right">Referred</TH><TH className="text-right">First contact</TH><TH className="text-right">Reached intake</TH></tr></THead>
+                    <tbody>{f.rows.map((r) => <TR key={r.src}><TD>{r.src}</TD><TD className="text-right tabular">{suppress(r.refs)}</TD><TD className="text-right tabular">{suppress(r.contacted)}</TD><TD className="text-right tabular">{suppress(r.completed)}</TD></TR>)}</tbody>
+                  </Table>
+                )}
+              </PanelBody>
+            </Panel>
+          ) : null}
+
           <div className="grid gap-5 md:grid-cols-2">
             <Panel>
               <PanelHeader title="Time to first contact" description={today ? undefined : `Median ${sp.median.toFixed(1)} h, slowest tenth ${sp.p90.toFixed(1)} h. ${pct(sp.withinTarget)} inside target.`} />
@@ -164,7 +193,7 @@ export default function ImpactDashboard() {
                   <p className="py-8 text-center text-sm text-ink-3">Not measured today. Nobody knows how long a family waits.</p>
                 ) : (
                   <>
-                    <Histogram buckets={sp.buckets} markerAfter={2} markerLabel="Target: 1 business day" />
+                    <Histogram buckets={sp.buckets} markerAfter={2} markerLabel="Target: 1 business day" color="var(--color-cv-amber)" />
                     <p className="mt-2 flex items-center gap-1.5 text-xs text-ink-3"><Info size={12} /> {sp.breaches} missed the target this week; each was escalated automatically.</p>
                   </>
                 )}
@@ -174,9 +203,9 @@ export default function ImpactDashboard() {
               <PanelHeader title="Source health" description="Partner organizations by relationship stage." />
               <PanelBody className="space-y-3">
                 <div className="grid grid-cols-4 gap-2 text-center">
-                  {[["Active", health.active, "text-ok"], ["Quiet", health.quiet, "text-warn"], ["Dormant", health.dormant, "text-crit"], ["New", health.fresh, "text-ink-2"]].map(([l, n, c]) => (
+                  {[["Active", health.active, "text-teal-strong"], ["Quiet", health.quiet, "text-warn"], ["Dormant", health.dormant, "text-ink-2"], ["New", health.fresh, "text-cv-teal"]].map(([l, n, c]) => (
                     <div key={l as string} className="rounded-md bg-canvas px-1 py-2">
-                      <div className={`font-display text-xl font-semibold tabular ${c}`}>{today ? "?" : n}</div>
+                      <div className={`num text-xl ${c}`}>{today ? "?" : n}</div>
                       <div className="text-xs text-ink-2">{l}</div>
                     </div>
                   ))}
@@ -185,9 +214,12 @@ export default function ImpactDashboard() {
                   <ul className="divide-y divide-line-2">
                     {quietOrgs.slice(0, 4).map((o) => (
                       <li key={o.id} className="flex items-center justify-between gap-2 py-2 text-sm">
-                        <Link href={href("/app/organization", { id: o.id })} className="min-w-0 truncate text-ink hover:text-teal-strong hover:underline">{o.name}</Link>
+                        <span className="min-w-0">
+                          <Link href={href("/app/organization", { id: o.id })} className="block truncate text-ink hover:text-teal-strong hover:underline">{o.name}</Link>
+                          <span className="text-xs text-ink-3">{quietLine(o, now)}</span>
+                        </span>
                         <span className="flex shrink-0 items-center gap-2">
-                          <span className="text-xs text-ink-3">{o.lastReferralAt ? `${Math.floor((now - o.lastReferralAt) / D)} d` : "never"}</span>
+                          <Sparkline values={o.monthly} label={`${o.name}: referrals by month, last 6 months`} />
                           <StageChip stage={o.stage} />
                         </span>
                       </li>
@@ -210,4 +242,13 @@ export default function ImpactDashboard() {
       <p className="mt-5 text-xs text-ink-3">The 90-day history is illustrative synthetic data; live referrals made during this demo are added on top. Production reads a de-identified attribution mart refreshed nightly from the Care Zone (counts and status codes only).</p>
     </div>
   );
+}
+
+/** FT-123: "used to send 4 a month; none since August". */
+function quietLine(o: { monthly: number[]; lastReferralAt: number | null }, now: number): string {
+  const avg = Math.round(o.monthly.slice(0, 4).reduce((a, b) => a + b, 0) / 4);
+  if (!o.lastReferralAt) return "No referrals yet";
+  const month = new Date(o.lastReferralAt).toLocaleDateString("en-US", { month: "long" });
+  const days = Math.floor((now - o.lastReferralAt) / 86_400_000);
+  return avg ? `Used to send about ${avg} a month; none since ${month} (${days} days)` : `Last referral ${days} days ago`;
 }

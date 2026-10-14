@@ -204,7 +204,7 @@ export function TrendLines({ labels, a, b, aName, bName, height = 220 }: { label
 }
 
 // ---------------------------------------------------------------- Histogram (single series)
-export function Histogram({ buckets, markerAfter, markerLabel, height = 206, unit = "referrals", label = "Distribution of time to first contact" }: { buckets: { label: string; n: number }[]; markerAfter?: number; markerLabel?: string; height?: number; unit?: string; label?: string }) {
+export function Histogram({ buckets, markerAfter, markerLabel, height = 206, unit = "referrals", label = "Distribution of time to first contact", color = SERIES.a }: { buckets: { label: string; n: number }[]; markerAfter?: number; markerLabel?: string; height?: number; unit?: string; label?: string; color?: string }) {
   const [ref, width] = useWidth<HTMLDivElement>();
   const [hover, setHover] = React.useState<number | null>(null);
   const pad = { l: 8, r: 8, t: 44, b: 26 };
@@ -225,7 +225,7 @@ export function Histogram({ buckets, markerAfter, markerLabel, height = 206, uni
             return (
               <g key={b.label} onMouseEnter={() => setHover(i)} tabIndex={0} aria-label={`${b.label}: ${b.n} ${unit}`}>
                 <rect x={pad.l + slot * i} y={pad.t} width={slot} height={plotH + pad.b} fill={hover === i ? "var(--color-sunken)" : "transparent"} />
-                <path d={vbar(cx - bw / 2, pad.t + plotH - h, bw, h)} fill={SERIES.a} />
+                <path d={vbar(cx - bw / 2, pad.t + plotH - h, bw, h)} fill={color} />
                 <text x={cx} y={pad.t + plotH - h - 6} textAnchor="middle" fontSize={11} fill="var(--color-ink-2)" className="tabular">{b.n}</text>
                 <text x={cx} y={height - 8} textAnchor="middle" fontSize={10.5} fill="var(--color-ink-3)">{b.label}</text>
               </g>
@@ -254,12 +254,79 @@ export function Histogram({ buckets, markerAfter, markerLabel, height = 206, uni
 /** Chart / Table switch used on every chart panel (accessibility: a table view always exists). */
 export function ViewToggle({ value, onChange }: { value: "chart" | "table"; onChange: (v: "chart" | "table") => void }) {
   return (
-    <div className="inline-flex rounded-md border border-line p-0.5 text-xs" role="group" aria-label="View">
+    <div className="inline-flex rounded-full border border-line p-0.5 text-xs" role="group" aria-label="View">
       {(["chart", "table"] as const).map((v) => (
-        <button key={v} type="button" aria-pressed={value === v} onClick={() => onChange(v)} className={cn("rounded px-2 py-0.5 capitalize", value === v ? "bg-sunken font-medium text-ink" : "text-ink-3 hover:text-ink")}>
+        <button key={v} type="button" aria-pressed={value === v} onClick={() => onChange(v)} className={cn("rounded-full px-2.5 py-0.5 capitalize", value === v ? "bg-teal font-semibold text-white" : "text-ink-3 hover:text-ink")}>
           {v}
         </button>
       ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- Sparkline (FT-123)
+export function Sparkline({ values, width = 84, height = 24, label }: { values: number[]; width?: number; height?: number; label: string }) {
+  const max = Math.max(1, ...values);
+  const step = values.length > 1 ? width / (values.length - 1) : width;
+  const pts = values.map((v, i) => `${(i * step).toFixed(1)},${(height - 3 - (v / max) * (height - 6)).toFixed(1)}`).join(" ");
+  const last = values[values.length - 1] ?? 0;
+  return (
+    <svg width={width} height={height} role="img" aria-label={label} className="shrink-0 overflow-visible">
+      <polyline points={pts} fill="none" stroke="var(--color-cv-teal)" strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" />
+      <circle cx={(values.length - 1) * step} cy={height - 3 - (last / max) * (height - 6)} r={2.6} fill={last === 0 ? "var(--color-cv-amber)" : "var(--color-cv-teal)"} />
+    </svg>
+  );
+}
+
+// ---------------------------------------------------------------- Source-to-intake flow (FT-181, Sankey-style)
+export interface FlowRow { label: string; refs: number; contacted: number; completed: number }
+export function FlowChart({ rows, height = 300, fmt = (n: number) => String(n) }: { rows: FlowRow[]; height?: number; fmt?: (n: number) => string }) {
+  const [ref, width] = useWidth<HTMLDivElement>();
+  const total = rows.reduce((s, r) => s + r.refs, 0) || 1;
+  const contacted = rows.reduce((s, r) => s + r.contacted, 0);
+  const completed = rows.reduce((s, r) => s + r.completed, 0);
+  const gap = 6;
+  const usable = height - 30 - gap * (rows.length - 1);
+  const k = usable / total;
+  const colW = 14;
+  const x0 = 150, x2 = Math.max(x0 + 160, width - 150), x1 = (x0 + x2) / 2;
+  const top = 22;
+  let y = top;
+  const left = rows.map((r) => { const h = Math.max(2, r.refs * k); const n = { ...r, y, h }; y += h + gap; return n; });
+  const midH = contacted * k, endH = completed * k;
+  const midY = top + (usable + gap * (rows.length - 1) - midH) / 2;
+  const endY = top + (usable + gap * (rows.length - 1) - endH) / 2;
+  let my = midY;
+  const band = (xa: number, ya: number, ha: number, xb: number, yb: number, hb: number) => {
+    const c = (xa + xb) / 2;
+    return `M${xa},${ya} C${c},${ya} ${c},${yb} ${xb},${yb} L${xb},${yb + hb} C${c},${yb + hb} ${c},${ya + ha} ${xa},${ya + ha} Z`;
+  };
+  const colors = ["#1d7fa3", "#28a8e0", "#5dc7ee", "#97d7f6", "#075e7e", "#119ed4", "#98daf8", "#03374a"];
+  return (
+    <div ref={ref}>
+      {width > 0 ? (
+        <svg width={width} height={height} role="img" aria-label="Flow from referral source to first contact to reaching intake" className="block">
+          <text x={x0 + colW / 2} y={12} textAnchor="middle" fontSize={11} fill="var(--color-ink-3)">Referred</text>
+          <text x={x1 + colW / 2} y={12} textAnchor="middle" fontSize={11} fill="var(--color-ink-3)">First contact</text>
+          <text x={x2 + colW / 2} y={12} textAnchor="middle" fontSize={11} fill="var(--color-ink-3)">Reached intake</text>
+          {left.map((n, i) => {
+            const ch = n.contacted * k;
+            const path = band(x0 + colW, n.y, ch, x1, my, ch);
+            const out = <g key={n.label}>
+              <path d={path} fill={colors[i % colors.length]} opacity={0.35} />
+              <rect x={x0} y={n.y} width={colW} height={n.h} rx={3} fill={colors[i % colors.length]} />
+              <text x={x0 - 8} y={n.y + n.h / 2} textAnchor="end" dominantBaseline="middle" fontSize={11.5} fill="var(--color-ink)">{n.label} <tspan fill="var(--color-ink-3)">{fmt(n.refs)}</tspan></text>
+            </g>;
+            my += ch;
+            return out;
+          })}
+          <rect x={x1} y={midY} width={colW} height={midH} rx={3} fill="var(--color-cv-teal)" />
+          <path d={band(x1 + colW, midY, endH, x2, endY, endH)} fill="var(--color-cv-teal)" opacity={0.3} />
+          <rect x={x2} y={endY} width={colW} height={endH} rx={3} fill="var(--color-cv-deep)" />
+          <text x={x1 + colW + 6} y={midY - 6} fontSize={11.5} fill="var(--color-ink)">{fmt(contacted)} contacted</text>
+          <text x={x2 + colW + 8} y={endY + endH / 2} dominantBaseline="middle" fontSize={12} fontWeight={600} fill="var(--color-ink)">{fmt(completed)} reached intake</text>
+        </svg>
+      ) : <div style={{ height }} />}
     </div>
   );
 }
