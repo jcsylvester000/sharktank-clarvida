@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   Bell, BookOpen, Bot, Building2, Building, ChartColumnBig, Gauge, HeartHandshake, Inbox, Lock, Megaphone, Menu, PhoneIncoming, QrCode, Radar, Rocket, ScrollText,
-  Settings, ShieldCheck, LogOut, Presentation, RotateCcw, Check, X, Activity, LayoutDashboard, Mail, UserCog, FileText, Eye, Timer, Map as MapIcon, Sprout, Lightbulb,
+  Settings, ShieldCheck, LogOut, Presentation, RotateCcw, Check, X, Activity, LayoutDashboard, Mail, UserCog, FileText, Eye, Timer, Map as MapIcon, Sprout, Lightbulb, Network, Calculator, Route, MessageCircleQuestion,
 } from "lucide-react";
 import { LiveControls } from "@/components/live/live-controls";
 import { isSimUser } from "@/lib/live/seed";
@@ -31,7 +31,7 @@ import { Avatar, Logo, PageSkeleton, SyntheticNotice } from "@/components/brand/
 import type { Role, User } from "@/lib/domain/types";
 
 const ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
-  LayoutDashboard, Radar, Building2, Building, Megaphone, QrCode, Inbox, FileText, PhoneIncoming, Gauge, BookOpen, ChartColumnBig, Rocket, HeartHandshake, ScrollText, Bot, ShieldCheck, Settings, Activity, Bell, Mail, UserCog, Map: MapIcon, Sprout, Lightbulb,
+  LayoutDashboard, Radar, Building2, Building, Megaphone, QrCode, Inbox, FileText, PhoneIncoming, Gauge, BookOpen, ChartColumnBig, Rocket, HeartHandshake, ScrollText, Bot, ShieldCheck, Settings, Activity, Bell, Mail, UserCog, Map: MapIcon, Sprout, Lightbulb, Network, Calculator, Route, MessageCircleQuestion,
 };
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -69,6 +69,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (lastLogged.current === key) return;
     lastLogged.current = key;
     mutate((d) => {
+      const guideNav = typeof window !== "undefined" ? (window as unknown as { __cvGuideNav?: number }).__cvGuideNav ?? 0 : 0;
+      if (access === "none" && Date.now() - guideNav < 2500) return;
       if (access === "none") audit(d, { action: `Access denied: ${page.title}`, objectId: page.id, zone: page.zone, category: "access" });
       else {
         audit(d, { action: `Viewed ${page.title}`, objectId: search.get("id") ?? page.id, zone: page.zone, category: page.zone === "Care" ? "care" : undefined });
@@ -117,7 +119,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="flex min-w-0 flex-col">
           <ContextBar page={page} user={user} live={live} />
           <main className="mx-auto w-full max-w-[1320px] flex-1 px-4 py-6 sm:px-6 lg:px-8">
-            {page?.liveOnly && !live ? <LiveOnly /> : page && access === "none" ? <AccessRestricted page={page} user={user} /> : ready ? children : <PageSkeleton />}
+            {page?.liveOnly && !live ? <LiveOnly /> : page && access === "none" ? <AccessRestricted page={page} user={user} /> : ready ? <div key={user?.id ?? "anon"} className="contents">{children}</div> : <PageSkeleton />}
           </main>
           <IdleGuard />
         </div>
@@ -422,6 +424,8 @@ function AccountMenu({ user }: { user: User }) {
 
 /** FT-164 Scenario launcher: sign in as the right person on the right page for a 'what happens when...' moment. */
 const SCENARIOS: { label: string; hint: string; userId: string; route: string; query?: Record<string, string> }[] = [
+  { label: "A referral arrives by phone", hint: "Dana types it in and picks the source; it joins the same queue and clock.", userId: "u-dana", route: "/app/referral/new" },
+  { label: "Who sees what", hint: "Pick any person and see exactly what reaches their screen.", userId: "u-chris", route: "/app/teams" },
   { label: "A referral goes overdue", hint: "Ray sees the escalation and can reassign it.", userId: "u-ray", route: "/app/referral", query: { id: "REF-NC-24806" } },
   { label: "A program is full", hint: "ABA is on waitlist: outreach for it is paused everywhere.", userId: "u-priya", route: "/app/capacity" },
   { label: "Someone pastes client details", hint: "Try it in Maria's draft: the guard blocks it and logs it.", userId: "u-maria", route: "/app/organization", query: { id: "o1", tab: "outreach" } },
@@ -447,12 +451,20 @@ function DemoMenu() {
       >
         <p className="mb-2 text-sm font-semibold">Demo controls</p>
         <div className="space-y-3">
-          <Button variant="cta" className="w-full justify-center" onClick={() => go(demo.guideOn ? demo.step : 0)}>
-            {demo.guideOn ? `Resume guided demo (step ${demo.step + 1})` : "Start the guided demo"}
+          <Button variant="cta" className="w-full justify-center" onClick={() => (demo.guideOn ? go(demo.step) : go(0, "pitch"))}>
+            {demo.guideOn ? `Resume ${demo.tour === "journey" ? "referral tour" : "guided demo"} (step ${demo.step + 1})` : "Start the guided demo"}
+          </Button>
+          <Button variant="secondary" className="w-full justify-center" onClick={() => go(0, "journey")}>
+            Follow one referral through every account
           </Button>
           <Button variant="secondary" className="w-full justify-center" onClick={() => window.open("/presenter/", "speaker", "width=560,height=820")}>
             Open presenter notes window
           </Button>
+          <PopoverClose asChild>
+            <Button variant="secondary" className="w-full justify-center" onClick={() => router.push(href("/app/answers"))}>
+              Questions and Answers (judges' Q&amp;A)
+            </Button>
+          </PopoverClose>
           <Switch checked={demo.presenter} onCheckedChange={(v) => mutate((d) => { d.demo.presenter = v; if (v) d.demo.showBrdTags = false; }, undefined, sys)} label="Presenter mode (larger type, arrow keys)" />
           <Switch checked={demo.showBrdTags} onCheckedChange={(v) => mutate((d) => { d.demo.showBrdTags = v; }, undefined, sys)} label="Explain mode (show page and feature IDs)" />
           <div>

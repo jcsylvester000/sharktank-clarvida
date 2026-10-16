@@ -10,7 +10,7 @@ const server = spawn(process.execPath, [path.join(__dirname, "server.js"), out, 
 const only = process.argv.slice(2);
 setTimeout(() => {
   let failed = 0;
-  const suites = ["b1-accounts.js", "b2-care.js", "b3-outreach.js", "b4-insights.js", "b5-acceptance.js", "b5-features.js", "kb.js"].filter((s) => !only.length || only.some((o) => s.startsWith(o)));
+  const suites = ["b1-accounts.js", "b2-care.js", "b3-outreach.js", "b4-insights.js", "b5-acceptance.js", "b5-features.js", "b6-management.js", "b7-journey.js", "kb.js"].filter((s) => !only.length || only.some((o) => s.startsWith(o)));
   for (const s of suites) {
     console.log(`\n=== ${s}`);
     const r = spawnSync(process.execPath, [path.join(__dirname, s)], { cwd: __dirname, encoding: "utf8", timeout: 900000 });

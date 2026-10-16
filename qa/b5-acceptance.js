@@ -33,13 +33,13 @@ const PAGES = [
   [null, "/partner/confirmation/?ref=REF-NC-24811"], [null, "/presenter/"], [null, "/live/"],
   ["u-maria", "/app/"], ["u-maria", "/app/finder/"], ["u-maria", "/app/map/"], ["u-maria", "/app/directory/"], ["u-maria", "/app/organization/?id=o1"],
   ["u-maria", "/app/organization/?id=o1&tab=outreach"], ["u-maria", "/app/nurture/"], ["u-maria", "/app/kits/"], ["u-maria", "/app/notifications/"],
-  ["u-maria", "/app/inbox/"], ["u-maria", "/app/settings/"], ["u-maria", "/app/trust/"],
+  ["u-maria", "/app/inbox/"], ["u-maria", "/app/settings/"], ["u-maria", "/app/trust/"], ["u-maria", "/app/sources/"], ["u-maria", "/app/answers/"],
   ["u-lena", "/app/"], ["u-lena", "/app/events/"], ["u-lena", "/app/admin/"], ["u-lena", "/app/foster/"],
   ["u-dana", "/app/"], ["u-dana", "/app/intake/"], ["u-dana", "/app/referral/?id=REF-NC-24811"], ["u-dana", "/app/referral/new/"],
   ["u-ray", "/app/"], ["u-priya", "/app/"], ["u-priya", "/app/capacity/"], ["u-priya", "/app/catalog/"],
   ["u-alex", "/app/"], ["u-alex", "/app/impact/"], ["u-alex", "/app/pilot/"], ["u-alex", "/app/content/"], ["u-alex", "/app/live/"],
   ["u-sam", "/app/"], ["u-sam", "/app/audit/"], ["u-sam", "/app/ai-governance/"],
-  ["u-chris", "/app/"], ["u-chris", "/app/admin/"], ["u-jordan", "/partner/hub/"], ["u-judge", "/app/"], ["u-judge", "/app/pilot/"],
+  ["u-chris", "/app/"], ["u-chris", "/app/admin/"], ["u-chris", "/app/teams/"], ["u-alex", "/app/value/"], ["u-jordan", "/partner/hub/"], ["u-judge", "/app/"], ["u-judge", "/app/pilot/"],
 ];
 // Default view must not show developer codes or filler. (Explain mode shows BRD tags on purpose.)
 const POLISH = /lorem|ipsum|\bTODO\b|\bTBD\b|\bundefined\b|\bNaN\b|\[object |\bFT-\d{3}\b|\bPG-\d{2}\b|\bAC-[A-Z]{2}-\d|\bBR-\d{2}\b|\bOQ-\d{2}\b|\bJR-\d{2}|\bHO-\d{2}\b|Claravida|Clarivida/;
@@ -159,17 +159,17 @@ const POLISH = /lorem|ipsum|\bTODO\b|\bTBD\b|\bundefined\b|\bNaN\b|\[object |\bF
       let fails = [];
       await p.click('button:has-text("Start the demo")');
       await bar().waitFor({ timeout: 5000 });
-      for (let n = 1; n <= 13; n++) {
+      for (let n = 1; n <= 14; n++) {
         const ts = Date.now();
         if (n > 1) {
-          if (n === 7) {
+          if (n === 8) {
             await p.click('[data-guide="fill-sample"]');
             await p.click('[data-guide="send-referral"]');
             await p.waitForURL(/partner\/confirmation/, { timeout: 8000 });
           }
           await bar().locator('button:has-text("Next")').click();
         }
-        const ok1 = await p.waitForFunction((k) => document.querySelector('[role=region][aria-label="Guided demo"]')?.textContent.includes(`${k} / 13`), n, { timeout: 8000 }).then(() => true, () => false);
+        const ok1 = await p.waitForFunction((k) => document.querySelector('[role=region][aria-label="Guided demo"]')?.textContent.includes(`${k} / 14`), n, { timeout: 8000 }).then(() => true, () => false);
         const target = await p.waitForSelector(".guide-highlight", { timeout: 6000 }).then(() => true, () => false);
         if (!ok1 || !target) fails.push(n);
         stepTimes.push(Date.now() - ts);
@@ -178,7 +178,7 @@ const POLISH = /lorem|ipsum|\bTODO\b|\bTBD\b|\bundefined\b|\bNaN\b|\[object |\bF
       await bar().locator('button:has-text("Finish")').click();
       runs.push({ run, ms: Date.now() - tr, fails });
     }
-    ok("AC-NF-09 guided demo: 5 consecutive runs, all 13 steps each, no failures", runs.every((r) => r.fails.length === 0), runs.map((r) => `${r.run}:${r.fails.length ? "fail " + r.fails : Math.round(r.ms / 1000) + "s"}`).join(" "));
+    ok("AC-NF-09 guided demo: 5 consecutive runs, all 14 steps each, no failures", runs.every((r) => r.fails.length === 0), runs.map((r) => `${r.run}:${r.fails.length ? "fail " + r.fails : Math.round(r.ms / 1000) + "s"}`).join(" "));
     ok("AC-NF-09 reset restores the starting state in 2 s or less", resets.every((x) => x <= 2000), resets.map((x) => x + "ms").join(", "));
     ok("AC-NF-03 / AC-WC-16 demo completes with the map offline (tiles fail) and makes no other external requests", ext.length === 0 && runs.every((r) => !r.fails.length), `${tileReq} tile requests failed gracefully; other external: ${ext.length}`);
     ok("AC-NF-10 zero console errors over 5 guided runs", errs.length === 0, errs.slice(0, 3).join(" | "));

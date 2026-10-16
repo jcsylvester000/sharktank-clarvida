@@ -62,7 +62,7 @@ export default function PartnerHub() {
           <div className="rounded-2xl border border-line bg-surface px-5 py-4"><p className="text-sm text-ink-2">Contacted within 1 business day</p><p className="num mt-1 text-[2rem] text-cv-teal">{stats.onTime} of {stats.contacted}</p></div>
         </div>
       ) : null}
-      <section className="overflow-hidden rounded-2xl border border-line bg-surface" aria-labelledby="my-refs">
+      <section className="overflow-hidden rounded-2xl border border-line bg-surface" aria-labelledby="my-refs" data-guide="hub">
         <h2 id="my-refs" className="border-b border-line-2 px-5 py-3 text-lg">My referrals</h2>
         {!data?.refs.length ? (
           <SunState compact title="No referrals yet.">Your first referral will appear here.</SunState>

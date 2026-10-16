@@ -1,6 +1,6 @@
 {
   "name": "clarvida-sharktank-v3",
-  "version": "3.0.0-rc1",
+  "version": "3.0.0-rc4",
   "private": true,
   "description": "Clarvida Referral Co-Pilot, Shark Tank prototype v3 (branded, account-based, synthetic data, no database).",
   "scripts": {

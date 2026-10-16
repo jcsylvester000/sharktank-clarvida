@@ -67,6 +67,8 @@ Maps use **OpenStreetMap** through Leaflet: street tiles load from `tile.openstr
 | `src/lib/data/` | Synthetic seed (accounts, inbox, activity, organizations, referrals) |
 | `src/lib/access.ts` | Page registry = Access Matrix (User Journey workbook) |
 | `src/lib/dashboard.ts` | Role dashboard KPIs, alerts and tasks |
+| `src/lib/rules/economics.ts` | Time-saved model behind Time and Value and Teams and Access (no cost or pricing in the app) |
+| `src/lib/data/org.ts` | Company structure (16 states, regions, city offices), positions and `visibleTo()` for Teams and Access |
 | `public/brand/` | Clarvida logos and Brand Kit photo (bundled; no external requests) |
 | `qa/` | Browser checks (Playwright) |
 
@@ -81,9 +83,11 @@ node server.js ../out 4310 &   # serve the build
 node b1-accounts.js            # Batch 1: accounts, sign-in, MFA, welcome, dashboards, lockout, reset, access
 node b2-care.js                # Batch 2: partner form → intake → referral → status, consent, X-ray, redirect, escalation
 node b3-outreach.js            # Batch 3: Map Explorer, finder map, brief/draft/PHI/approve, nurture, content, scope
-node b4-insights.js            # Batch 4: story, 13-step guided demo, presenter window, impact Ask/X-ray, pilot, admin approvals, audit
+node b4-insights.js            # Batch 4: story, 14-step guided demo, presenter window, impact Ask/X-ray, pilot, admin approvals, audit
 node b5-acceptance.js          # Batch 5: 45 pages × 3 screens, axe, 5 timed handoffs, 5 guided runs offline, reset, privacy, storage, brand
 node b5-features.js            # Batch 5: feature spot checks (capacity pause, fax entry, duplicates, Spanish, settings, idle, live map)
+node b7-journey.js              # Batch 8: 'Follow one referral' tour through all 11 accounts (page, account, chip, highlight); screenshots in qa/shots/b7
+node b6-management.js          # Batch 6/7: Teams and Access, Time and Value (no pricing), Where Referrals Come From, Questions and Answers ('Show me'), axe, phone, role gates
 ```
 
 Or run everything in one go (starts its own server): `cd qa && npm run qa` (about 15 minutes).
@@ -96,8 +100,11 @@ Or run everything in one go (starts its own server): `cd qa && npm run qa` (abou
 | B1 | Foundation: brand system, 11 accounts, sign-in, SSO chooser, MFA + Demo Authenticator, remembered devices, lockout, password reset, welcome, role dashboards, mock API, notifications, Demo Inbox, settings, partner hub, reset | Done (Oct 14) |
 | B2 | Care loop: branded partner form (specific errors, nearest office, sample fill), reference-only confirmation, signed status links, live handoff, intake queue with next best call, brand response clock, referral detail, warm redirect, escalation + reassign, referrer notices and team activity | Done (Oct 14) |
 | B3 | Outreach and maps: OpenStreetMap Map Explorer (POIs by stage, clustering, 5/10/25-mile rings, drive times, route planner, location check-in, referral heat, coverage gaps, need vs capacity), finder with map, organization (log visit/call, check-in, approvals in Demo Inbox), Nurture Journeys with warm handoff, Content and Webinar Ideas | Done (Oct 14) |
-| B4 | Insights, governance and presentation: Before/After story, 13-step guided demo with account switching, presenter window (timer, 3-minute cut, fallbacks), Impact Dashboard (Privacy X-ray, source-to-intake flow, Ask refusal), Impact and Pilot (ROI sliders the judge can move, scorecard, the ask, readiness gates, sources), Trust and Security (what is simulated), two-person approval with notifications | Done (Oct 14) |
+| B4 | Insights, governance and presentation: Before/After story, guided demo with account switching (14 steps since B7), presenter window (timer, 3-minute cut, fallbacks), Impact Dashboard (Privacy X-ray, source-to-intake flow, Ask refusal), Impact and Pilot (ROI sliders the judge can move, scorecard, the ask, readiness gates, sources), Trust and Security (what is simulated), two-person approval with notifications | Done (Oct 14) |
 | B5 | QA against the Acceptance Criteria workbook: 170 automated checks, filled AC workbook, release candidate 3.0.0-rc1 | Done (Oct 14) |
+| B6 | Management Q&A: Teams and Access PG-36 (hierarchy bottom up, 16 states / 3 regions / city offices, see-what-someone-sees, visibility matrix) and Time and Value PG-37 (time saved per role/user/state) | Done (Oct 16) |
+| B7 | Referral origin and Q&A: Where Referrals Come From PG-38 (who refers, how a referral starts today from Clarvida's own materials, 5 channels into one queue, lifecycle, ambassador's role), guided demo step 2 (now 14 steps, 5:30), Questions and Answers PG-39 (20 questions with 'Show me' as the right account), Demo menu scenarios (phone referral, who sees what); pricing removed from the app | Done (Oct 17) |
+| B8 | It starts with a referral: opening page shows a partner referral being filled in and sent (animated, reduced-motion safe); 'Follow one referral through every account' tour (13 steps, Jordan > Dana > Ray > Priya > Jordan > Maria > Lena > Jon > Alex > Sam > Chris > leadership); 'Now viewing as' chip and account strip in the demo bar for both tours; fix: page state reset when the account changes (an ambassador briefly kept the previous ambassador's plan) | Done (Oct 17) |
 
 ## Before the pitch (people, not code)
 

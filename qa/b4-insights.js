@@ -1,4 +1,4 @@
-// Batch 4 checks: story, 13-step guided demo, presenter window, impact (Ask refusal, X-ray, flow), pilot (judge slider, the ask),
+// Batch 4 checks: story, 14-step guided demo, presenter window, impact (Ask refusal, X-ray, flow), pilot (judge slider, the ask),
 // trust "What is simulated", admin second approver, disabled user, audit filtered by blocked.
 const { chromium } = require("playwright");
 const fs = require("fs");
@@ -48,20 +48,20 @@ const bar = (p) => p.locator('[role=region][aria-label="Guided demo"]');
   ok("Story proof points marked self-reported with source", /self-reported/.test(after) && /180,000/.test(after));
   await p.screenshot({ path: SHOTS + "/01-story.png" });
 
-  // ---- Guided demo: all 13 steps
+  // ---- Guided demo: all 14 steps
   await p.click('button:has-text("Start the demo")');
   await bar(p).waitFor({ timeout: 5000 });
   const expect = [
-    [1, /\/story/, "before-after", null], [2, /\/app\/$/, "alerts", "u-maria"], [3, /\/app\/finder/, "finder", "u-maria"],
-    [4, /\/app\/organization/, "outreach", "u-maria"], [5, /\/app\/kits/, "kit", "u-maria"], [6, /\/partner\/refer/, "refer-form", null],
-    [7, /\/app\/intake/, "queue", "u-dana"], [8, /\/app\/referral/, "actions", "u-dana"], [9, /\/app\/referral/, "consent-sim", "u-dana"],
-    [10, /\/app\/impact/, "impact", "u-alex"], [11, /\/app\/capacity/, "capacity", "u-priya"], [12, /\/app\/referral/, "xray", "u-sam"], [13, /\/app\/pilot/, "the-ask", "u-alex"],
+    [1, /\/story/, "before-after", null], [2, /\/app\/sources/, "referral-sources", "u-maria"], [3, /\/app\/$/, "alerts", "u-maria"], [4, /\/app\/finder/, "finder", "u-maria"],
+    [5, /\/app\/organization/, "outreach", "u-maria"], [6, /\/app\/kits/, "kit", "u-maria"], [7, /\/partner\/refer/, "refer-form", null],
+    [8, /\/app\/intake/, "queue", "u-dana"], [9, /\/app\/referral/, "actions", "u-dana"], [10, /\/app\/referral/, "consent-sim", "u-dana"],
+    [11, /\/app\/impact/, "impact", "u-alex"], [12, /\/app\/capacity/, "capacity", "u-priya"], [13, /\/app\/referral/, "xray", "u-sam"], [14, /\/app\/pilot/, "the-ask", "u-alex"],
   ];
   let stepFails = [];
   for (const [n, url, target, user] of expect) {
     if (n > 1) {
-      if (n === 7) {
-        // Step 6 is the partner form: submit a referral so LATEST resolves to it.
+      if (n === 8) {
+        // Step 7 is the partner form: submit a referral so LATEST resolves to it.
         await p.click('[data-guide="fill-sample"]');
         await p.click('[data-guide="send-referral"]');
         await p.waitForURL(/partner\/confirmation/, { timeout: 8000 });
@@ -77,11 +77,11 @@ const bar = (p) => p.locator('[role=region][aria-label="Guided demo"]');
       const sess = await p.evaluate(() => JSON.parse(sessionStorage.getItem("cv-session") || "null"));
       const who = sess?.userId ?? st.session?.userId;
       const highlighted = await p.locator(`[data-guide="${target}"].guide-highlight`).count();
-      if (!txt.includes(`${n} / 13`) || (user && who !== user) || !highlighted) stepFails.push(`${n}:${!txt.includes(`${n} / 13`) ? "bar" : user && who !== user ? "user=" + who : "nohl"}`);
+      if (!txt.includes(`${n} / 14`) || (user && who !== user) || !highlighted) stepFails.push(`${n}:${!txt.includes(`${n} / 14`) ? "bar" : user && who !== user ? "user=" + who : "nohl"}`);
     } catch (e) { stepFails.push(`${n}:${String(e).slice(0, 60)}`); }
-    if (n === 6 || n === 12 || n === 13) await p.screenshot({ path: SHOTS + `/02-step${n}.png` });
+    if (n === 2 || n === 7 || n === 13 || n === 14) await p.screenshot({ path: SHOTS + `/02-step${n}.png` });
   }
-  ok("JR-13 guided demo: 13 steps, right page, right account, target highlighted", stepFails.length === 0, stepFails.join(", "));
+  ok("JR-13 guided demo: 14 steps (incl. Where referrals come from), right page, right account, target highlighted", stepFails.length === 0, stepFails.join(", "));
   const lastRef = (await ls(p)).demo?.lastPartnerRef;
   ok("Step 8/12 use the referral just submitted (LATEST)", Boolean(lastRef) && p.url().includes("pilot"), lastRef);
   await bar(p).locator('button:has-text("Finish")').click();
@@ -93,17 +93,19 @@ const bar = (p) => p.locator('[role=region][aria-label="Guided demo"]');
   await sp.goto(BASE + "/presenter/");
   await sp.evaluate(() => { window.name = "speaker"; });
   await sp.click('button:has-text("Start at step 1")');
-  await sp.waitForSelector("text=1 / 13");
-  await sp.click('button:has-text("Next: Maria")');
-  await p.waitForURL(/\/app\/$/, { timeout: 8000 }).catch(() => {});
-  ok("FT-161 presenter Next moves the demo window (step 2, Maria)", /\/app\/$/.test(p.url()) && (await sp.locator("text=signed in as Maria Reyes").count()) === 1, p.url());
+  await sp.waitForSelector("text=1 / 14");
+  await sp.click('button:has-text("Next: Where referrals")');
+  await p.waitForURL(/\/app\/sources/, { timeout: 8000 }).catch(() => {});
+  ok("FT-161 presenter Next moves the demo window (step 2, Where referrals come from, as Maria)", /\/app\/sources/.test(p.url()) && (await sp.locator("text=signed in as Maria Reyes").count()) === 1, p.url());
+  await sp.click('button:has-text("Next:")');
+  await sp.waitForSelector("text=3 / 14");
   await sp.click('button:has-text("3-minute cut off")');
   const cut = await sp.locator("text=of 3:00").count();
   await sp.click('button:has-text("Next:")');
-  await sp.waitForSelector("text=4 / 13");
-  ok("3-minute cut skips step 3 (2 → 4) with a 3:00 budget", cut === 1);
+  await sp.waitForSelector("text=5 / 14");
+  ok("3-minute cut skips step 4 (3 → 5) with a 3:00 budget", cut === 1);
   await sp.keyboard.press("ArrowLeft");
-  await sp.waitForSelector("text=2 / 13");
+  await sp.waitForSelector("text=3 / 14");
   ok("Presenter arrow keys step back", true);
   ok("Presenter shows click/show and fallback", (await sp.locator("text=Click / show").count()) === 1 && (await sp.locator("text=If it fails:").count()) === 1);
   await sp.screenshot({ path: SHOTS + "/03-presenter.png" });

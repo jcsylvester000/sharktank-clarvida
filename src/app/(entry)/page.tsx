@@ -3,7 +3,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { Activity, Eye, EyeOff, KeyRound, Lock, PlayCircle, RotateCcw, Users, ExternalLink, Clapperboard, ChevronDown } from "lucide-react";
+import { Activity, Eye, EyeOff, KeyRound, Lock, PlayCircle, RotateCcw, Users, ExternalLink, Clapperboard, ChevronDown, Route } from "lucide-react";
 import { useStore } from "@/lib/store/db";
 import { useCurrentUser } from "@/lib/store/hooks";
 import { switchMode } from "@/lib/mode";
@@ -11,6 +11,7 @@ import { isSimUser } from "@/lib/live/seed";
 import { ROLE_LABEL, href, landingFor } from "@/lib/access";
 import { auth } from "@/mock-api";
 import { AuthFrame } from "@/components/auth/auth-frame";
+import { ReferralShowcase } from "@/components/auth/referral-showcase";
 import { useGuide } from "@/components/shell/guide-bar";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/misc";
@@ -90,10 +91,13 @@ function SignIn() {
 
   return (
     <AuthFrame
+      hero={<ReferralShowcase />}
+      heading="It all starts with a referral."
+      intro="A school counselor, caseworker or doctor sends a family to Clarvida. Everything in the Co-Pilot follows from that moment: who sent it, how fast the family is called, what the referrer hears back, and which relationships to grow."
       aside={
         <div className="mt-6 flex flex-wrap gap-2">
           <Link href="/story/" className="inline-flex items-center gap-1.5 rounded-full border border-teal/40 bg-surface px-4 py-2 text-sm font-semibold text-teal-strong hover:bg-teal-tint"><Clapperboard size={15} /> Opening scene</Link>
-          <button onClick={() => window.open("/partner/refer/?code=GCS-NC-2026", "partner", "width=520,height=900")} className="inline-flex items-center gap-1.5 rounded-full border border-teal/40 bg-surface px-4 py-2 text-sm font-semibold text-teal-strong hover:bg-teal-tint"><ExternalLink size={15} /> Open partner portal</button>
+          <button onClick={() => window.open("/partner/refer/?code=GCS-NC-2026", "partner", "width=520,height=900")} className="inline-flex items-center gap-1.5 rounded-full border border-teal/40 bg-surface px-4 py-2 text-sm font-semibold text-teal-strong hover:bg-teal-tint"><ExternalLink size={15} /> Try the referral form</button>
         </div>
       }
     >
@@ -180,7 +184,8 @@ function SignIn() {
           <Button variant="secondary" className="justify-center sm:col-span-2" onClick={() => switchMode("demo", "/")}><PlayCircle size={16} /> Switch to the pitch demo</Button>
         ) : (
           <>
-            <Button variant="primary" className="justify-center" onClick={() => go(0)}><PlayCircle size={16} /> Run the guided demo</Button>
+            <Button variant="primary" className="justify-center" onClick={() => go(0, "pitch")}><PlayCircle size={16} /> Run the guided demo</Button>
+            <Button variant="secondary" className="justify-center sm:col-span-2" onClick={() => go(0, "journey")} data-guide="journey-start"><Route size={16} /> Follow one referral through every account</Button>
             <Button variant="secondary" className="justify-center" onClick={() => switchMode("live", "/live/")}><Activity size={16} /> Live sandbox</Button>
           </>
         )}
@@ -201,6 +206,10 @@ function SignIn() {
           </>
         }
       />
+      <div className="mt-10 lg:hidden">
+        <p className="mb-2 text-sm font-semibold text-cv-teal">It all starts with a referral</p>
+        <ReferralShowcase compact />
+      </div>
     </AuthFrame>
   );
 }

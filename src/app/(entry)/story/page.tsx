@@ -116,7 +116,7 @@ export default function Story() {
 
         <div className="mt-8 flex flex-wrap items-center gap-3">
           <Button size="lg" variant={shown ? "secondary" : "primary"} onClick={() => setShown((s) => !s)} data-guide="toggle-with">{shown ? "Show today again" : "Show With the Co-Pilot"}</Button>
-          <Button size="lg" variant="cta" onClick={() => go(guideOn ? 1 : 0)}>Start the demo</Button>
+          <Button size="lg" variant="cta" onClick={() => go(guideOn ? 1 : 0, "pitch")}>Start the demo</Button>
         </div>
 
         <div className="mt-12 rounded-[var(--radius-panel)] bg-cv-ice px-6 py-6 sm:px-9">

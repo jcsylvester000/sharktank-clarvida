@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, ExternalLink, Play, RotateCcw, Scissors, TimerReset } from "lucide-react";
 import { useStore } from "@/lib/store/db";
-import { STEPS } from "@/lib/demo/steps";
+import { stepsFor } from "@/lib/demo/steps";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/brand/brand";
 import { cn } from "@/components/ui/cn";
@@ -26,6 +26,7 @@ export default function Presenter() {
     return () => clearInterval(t);
   }, []);
 
+  const STEPS = stepsFor(demo.tour);
   const order = short ? STEPS.filter((s) => s.short).map((s) => s.n - 1) : STEPS.map((s) => s.n - 1);
   const go = (i: number) => {
     const idx = Math.max(0, Math.min(STEPS.length - 1, i));
@@ -48,7 +49,7 @@ export default function Presenter() {
   const step = STEPS[demo.step];
   const next = nextIdx !== undefined ? STEPS[nextIdx] : undefined;
   const elapsed = started ? Math.floor((now - started) / 1000) : 0;
-  const limit = short ? 180 : 300;
+  const limit = demo.tour === "journey" ? 420 : short ? 180 : 330;
   const fmt = (n: number) => `${Math.floor(n / 60)}:${String(n % 60).padStart(2, "0")}`;
   const persona = step.userId ? users.find((u) => u.id === step.userId) : null;
   const budget = parseTime(step.time);

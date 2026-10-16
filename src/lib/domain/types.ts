@@ -482,6 +482,7 @@ export interface DemoState {
   showBrdTags: boolean;
   lastPartnerRef?: string;
   soundOn: boolean;
+  tour?: "pitch" | "journey"; // which guided tour is running (journey = follow one referral through every account)
 }
 
 export interface RoiAssumptions {
